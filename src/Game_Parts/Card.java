@@ -5,11 +5,11 @@ import Types.ID;
 public class Card 
 {
     public Color color;
-    public ID type;
+    public Value type;
 
-    public Card(Color color, ID type)
+    public Card(Color color, Value value)
     {
         this.color = color;
-        this.type = type;
+        this.value = value;
     }
 }

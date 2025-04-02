@@ -1,7 +1,7 @@
 package Game_Parts;
 
 import Types.Color;
-import Types.ID;
+import Types.Value;
 
 import java.util.Random;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class Hand
     public ID initialize_ID()
     {
         Random random = new Random();
-        ID[] values = ID.values();
+        ID[] values = Value.values();
         return values[random.nextInt(values.length)];
     }
 }
