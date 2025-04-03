@@ -26,6 +26,7 @@
       <version>1.7.31</version> <!-- Use version 1.7.31 or the version you prefer -->
     </dependency>
 
+    <!-- NEED for Cloud Auth Proxy -->
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
@@ -43,7 +44,8 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.1.0</version>
         <configuration>
-          <mainClass>main.java.UnoServer</mainClass>
+          <!--<mainClass>main.java.UnoServer</mainClass>-->
+          <mainClass>main.java.MySQLTest</mainClass>
         </configuration>
       </plugin>
     </plugins>

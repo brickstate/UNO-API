@@ -8,10 +8,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 public class Database {
-    private static final String URL = "jdbc:mysql://34.75.103.138:3306/GameDB";
-    private static final String USER = "root";
+    private static final String URL = "jdbc:mysql://localhost:3306/GameDB";
+    private static final String USER = "testuser";
     // There is no password
-    private static final String PASSWORD = "";
+    private static final String PASSWORD = "123";
 
     public static Connection getConnection() throws Exception {
         return DriverManager.getConnection(URL, USER, PASSWORD);
