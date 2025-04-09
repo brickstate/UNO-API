@@ -1,5 +1,5 @@
 package Types;
-public enum ID 
+public enum Value 
 {
     ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, PLUSTWO, PLUSFOUR, REVERSE, SKIP, COLORSWITCH
 }
