@@ -3,6 +3,7 @@ package main.java;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
@@ -39,6 +40,10 @@ import io.javalin.http.Handler;
 
 public class UnoServer {
     public static void main(String[] args) {
+
+        //NOTE when we get this running in docker we may need to revisit "jdbcUrl"
+        //    and change localhost -> ?docker.something?
+
         //Necessary for the server to connect to Cloud SQL Proxy
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         //yes I hardcoded the user and password to the DB idc 
@@ -50,36 +55,46 @@ public class UnoServer {
         Javalin app = Javalin.create().start(7000);
         
         // get server running and test enpoints
+        // "landing" endpoint
+        //Include some " ... for help run ???" for verbose help dialog 
         app.get("/", ctx -> ctx.result("Uno Game API is running!"));
 
+        //simple hello endpoint
         app.get("/hello", ctx -> ctx.result("Hello, world!"));
         
+        //can confirm this will get all of the users from the "users" table
+        app.get("/listUsers", listUsers()); 
+
+
+        // NEED TO TEST 
+        app.post("/registerUser", registerUser());
+
+
         
-        //TODO get the enpoints working
-        //testingtheconnection
-        app.get("/testing", testingconnection());
 
-        app.exception(Exception.class, (e, ctx) -> {
-            ctx.status(500);
-            ctx.result("Server error: " + e.getMessage());
-        });
-
+        //Leaving this here Until I need to delete it 
         // Endpoint for testing
         //app.post("/users/register", ctx -> {
             // Here you can access the body as a JSON object if you need it
         //    System.out.println(ctx.body()); // Print the request body
         //    ctx.result("User registered successfully!"); // Respond to the client
         //});
-
-        
         //app.post("/users/register", UserController.registerUser);
         //app.get("/users", UserController.getUsers);
+
+
+        // should catch server errors
+        app.exception(Exception.class, (e, ctx) -> {
+            ctx.status(500);
+            ctx.result("Server error: " + e.getMessage());
+        });
+
 
     }
 
     // TEST this function by adding more user names into the database
     //   and see if the user names will print out one after the other
-    public static Handler testingconnection(){
+    public static Handler listUsers(){
 
         return ctx -> {
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
@@ -91,7 +106,7 @@ public class UnoServer {
 
         //we want to do this to test the connection is working
         try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
-            System.out.println("Connected to database!");
+            System.out.println("Listing all registerd users from GameDB...");
 
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT * FROM users");
@@ -120,5 +135,49 @@ public class UnoServer {
         }
     };
   }
+
+  public static Handler registerUser(){
+    return ctx -> {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+
+        String username = ctx.formParam("username");
+        String userPassword = ctx.formParam("password");
+
+        if (username == null) {
+            ctx.status(400).result("Missing 'username'");
+            return;
+        }
+
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+            System.out.println("Inserting a new user into GameDB...");
+
+            String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, username);
+                pstmt.setString(2, userPassword);
+                int rowsInserted = pstmt.executeUpdate();
+
+                if (rowsInserted > 0) {
+                    ctx.status(201).result("User added successfully.");
+                } else {
+                    ctx.status(500).result("User insertion failed.");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            ctx.status(500).result("Database error: " + e.getMessage());
+        }
+    };
+
+  }
+
+
+
+
+
+
+
 }
 
