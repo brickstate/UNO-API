@@ -1,4 +1,4 @@
-//package main.java;
+package main.java;
 
 
 import java.sql.Connection;
@@ -57,16 +57,18 @@ public class UnoServer {
         // get server running and test enpoints
         // "landing" endpoint
         //Include some " ... for help run ???" for verbose help dialog 
-        app.get("/", ctx -> ctx.result("Uno Game API is running!"));
+        app.get("/", ctx -> ctx.result("Uno Game API is running! \nFor detailed info on Uno Game API endpoints: \n--->  curl http://localhost:7000/help"));
 
-        //simple hello endpoint
+        //simple hello endpoint (works)
         app.get("/hello", ctx -> ctx.result("Hello, world!"));
         
-        //can confirm this will get all of the users from the "users" table
+        //add more endpoints to the helpEndpoint() function as we add more game mechanics to the API
+        app.get("/help", helpEndpoint());
+
+        //this will get all of the users from the "users" table (works)
         app.get("/listUsers", listUsers()); 
 
-
-        // NEED TO TEST 
+        // adds a new user to the database (works)  
         app.post("/registerUser", registerUser());
 
 
@@ -170,10 +172,36 @@ public class UnoServer {
             ctx.status(500).result("Database error: " + e.getMessage());
         }
     };
-
   }
 
+  public static Handler helpEndpoint() {
+    // verbose help dialogue which we can add too in order
+    //    to not reference docs when testing endpoints / for UX
 
+    return ctx -> {
+        StringBuilder helpText = new StringBuilder();
+
+        //Add more help dialogue here as we add endpoints
+        helpText.append("UNO GAME API - HELP\n\n")
+                .append("[GET]  /               --> Health check\n")
+                .append("    Description: Confirms the API is running.\n")
+                .append("    Command: Invoke-WebRequest http://localhost:7000/\n\n")
+
+                .append("[GET]  /hello          --> Simple hello-world test\n")
+                .append("    Command: Invoke-WebRequest http://localhost:7000/hello\n\n")
+
+                .append("[GET]  /listUsers      --> Lists all users in the database\n")
+                .append("    Command: Invoke-WebRequest http://localhost:7000/listUsers\n\n")
+
+                .append("[POST] /registerUser   --> Registers a new user with username and password\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body \"username=[ENTERUSERNAME]\" -ContentType \"application/x-www-form-urlencoded\"\n\n")
+
+                .append("[GET]  /help           --> Displays this help information\n")
+                .append("    Command: Invoke-WebRequest http://localhost:7000/help\n");
+
+        ctx.result(helpText.toString());
+    };
+  }
 
 
 
