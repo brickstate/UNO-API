@@ -152,7 +152,39 @@ public class UnoServer {
             return;
         }
 
+        //checking to see if attemped registration of username is unique entry in table "users"
         try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+            // Check if username already exists
+            String checkSql = "SELECT COUNT(*) FROM users WHERE username = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, username);
+                ResultSet rs = checkStmt.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    ctx.status(409).result("Username already exists.");
+                    return;
+                }
+            }
+
+        //actually inserting unique user information into table "users"
+        String insertSql = "INSERT INTO users (username, password) VALUES (?, ?)";
+        try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+            insertStmt.setString(1, username);
+            insertStmt.setString(2, userPassword);
+            int rowsInserted = insertStmt.executeUpdate();
+
+            if (rowsInserted > 0) {
+                ctx.status(201).result("User added successfully.");
+            } else {
+                ctx.status(500).result("User insertion failed.");
+            }
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        ctx.status(500).result("Database error: " + e.getMessage());
+    }
+        /*
+        //old way to insert new info
+        try (Connection conn2 = DriverManager.getConnection(jdbcUrl, user, password)) {
             System.out.println("Inserting a new user into GameDB...");
 
             String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
@@ -171,6 +203,7 @@ public class UnoServer {
             e.printStackTrace();
             ctx.status(500).result("Database error: " + e.getMessage());
         }
+        */
     };
   }
 
