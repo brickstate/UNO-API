@@ -182,28 +182,6 @@ public class UnoServer {
         e.printStackTrace();
         ctx.status(500).result("Database error: " + e.getMessage());
     }
-        /*
-        //old way to insert new info
-        try (Connection conn2 = DriverManager.getConnection(jdbcUrl, user, password)) {
-            System.out.println("Inserting a new user into GameDB...");
-
-            String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setString(1, username);
-                pstmt.setString(2, userPassword);
-                int rowsInserted = pstmt.executeUpdate();
-
-                if (rowsInserted > 0) {
-                    ctx.status(201).result("User added successfully.");
-                } else {
-                    ctx.status(500).result("User insertion failed.");
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            ctx.status(500).result("Database error: " + e.getMessage());
-        }
-        */
     };
   }
 
