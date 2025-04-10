@@ -1,4 +1,4 @@
-package Types;
+package Game_Parts.Types;
 
 public enum Color 
 {

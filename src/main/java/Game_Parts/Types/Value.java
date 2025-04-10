@@ -1,4 +1,5 @@
-package Types;
+package Game_Parts.Types;
+
 public enum Value 
 {
     ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, PLUSTWO, PLUSFOUR, REVERSE, SKIP, COLORSWITCH

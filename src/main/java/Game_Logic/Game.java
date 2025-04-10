@@ -2,8 +2,8 @@ package Game_Logic;
 
 import Game_Parts.Card;
 import Game_Parts.Hand;
-import Types.Color;
-import Types.Value;
+import Game_Parts.Types.Color;
+import Game_Parts.Types.Value;
 
 import java.util.Scanner;
 import java.util.Random;

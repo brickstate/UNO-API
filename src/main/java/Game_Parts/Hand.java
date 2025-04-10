@@ -1,7 +1,7 @@
 package Game_Parts;
 
-import Types.Color;
-import Types.Value;
+import Game_Parts.Types.Color;
+import Game_Parts.Types.Value;
 
 import java.util.Random;
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ public class Hand
 
         for (int i = 0; i < 7; i++) 
         {
-            hand.add(new Card(initialize_color(), initialize_ID()));
+            hand.add(new Card(initialize_color(), initialize_Value()));
         }
 
     }
@@ -28,10 +28,10 @@ public class Hand
         return values[random.nextInt(values.length)];
     }
 
-    public ID initialize_ID()
+    public Value initialize_Value()
     {
         Random random = new Random();
-        ID[] values = Value.values();
+        Value[] values = Value.values();
         return values[random.nextInt(values.length)];
     }
 }
