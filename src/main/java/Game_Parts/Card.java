@@ -6,7 +6,6 @@ import Game_Parts.Types.Value;
 public class Card 
 {
     public Color color;
-    //public Value value;
     public Value value;
 
 

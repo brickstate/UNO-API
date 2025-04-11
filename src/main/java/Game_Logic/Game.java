@@ -4,9 +4,9 @@ import Game_Parts.Card;
 import Game_Parts.Hand;
 import Game_Parts.Types.Color;
 import Game_Parts.Types.Value;
+import Game_Parts.Deck;
 
 import java.util.Scanner;
-import java.util.Random;
 
 public class Game 
 {
@@ -15,23 +15,32 @@ public class Game
     int player_turn = 0;
     Hand hands[];
     Card topCard;
+    Deck deck;
     Boolean plusTwoPlayed = false;
     Boolean plusFourPlayed = false;
     int direction = 1;
 
+    /*
+     * Game constructor. Initializes the number of players, and starts the main
+     * game loop.
+     */
     public Game()
     {
-       num_players = playerSetup();
-       hands = new Hand[num_players];
+        deck = new Deck(); // intialize deck
+        num_players = playerSetup();
+        hands = new Hand[num_players];
 
-       for(int i = 0; i < num_players; i++)
-       {
-            hands[i] = new Hand();
-       }
-
-        gameLoop();
+        for(int i = 0; i < num_players; i++)
+        {
+                hands[i] = new Hand(deck);
+        }
+        
+        gameLoop(); // start game 
     }    
 
+    /*
+     * 
+     */
     public int playerSetup()
     {
         System.out.println("How many players? Two minimum, four max.");
@@ -51,10 +60,9 @@ public class Game
         }
     }
 
-    public void updateTopCard(Color color, Value value)
+    public void updateTopCard()
     {
-        topCard.color = color;
-        topCard.value = value;
+        topCard = deck.peekDiscard();
     }
 
     public Boolean is_Valid(Card card)
@@ -63,7 +71,7 @@ public class Game
         {
             return true;
         }
-        else if(card.value == Value.COLORSWITCH || card.color == Color.WILD)
+        else if(card.value == Value.COLORSWITCH || card.color == Color.WILD || card.value == Value.PLUSFOUR)
         {
             return true;
         }
@@ -88,17 +96,10 @@ public class Game
         return anyIsInvalid;
     }
 
-    public void initTopCard()
-    {
-        Random random = new Random();
-        Color color = Color.values()[random.nextInt(Color.values().length)];
-        Value value = Value.values()[random.nextInt(Value.values().length)];
-        topCard = new Card(color, value);
-    }
-
     public void gameLoop()
     {
-        initTopCard();
+        updateTopCard(); // Initialize top card
+
         while(true)
         {
             System.out.printf("Top card color: %s\n", topCard.color);
@@ -106,18 +107,23 @@ public class Game
             if(plusTwoPlayed)
             {
                 //Draw two cards
+                hands[player_turn].addCards(deck.drawMultipleCards(2));
+                plusTwoPlayed = false;
             }
             else if(plusFourPlayed)
             {
                 //Draw four cards
+                hands[player_turn].addCards(deck.drawMultipleCards(4));
+                plusFourPlayed = false;
             }
 
             System.out.printf("Player %d's turn\n", player_turn + 1);
             System.out.printf("Player %d's cards\n", player_turn + 1);
 
-            if(!handIsValid(hands[player_turn]))
+            while (!handIsValid(hands[player_turn]))
             {
                 //Draw cards until a valid card can be played
+                hands[player_turn].addCard(deck.drawCard());
             }
 
             for(int i = 0; i < hands[player_turn].hand.size(); i++)
@@ -133,13 +139,22 @@ public class Game
 
             while(!index_valid || !is_Valid(card_played))
             {
+                System.out.println("=================================");
+                System.out.println("is_Valid: " + is_Valid(card_played));
+                System.out.println("index_valid: " + index_valid);
+                System.out.println("=================================");
                 System.out.println("Invalid card. Please enter again.");
                 num_played = kb.nextInt() - 1;
+
+                // update index and card chosen 
+                index_valid = num_played >= 0 && num_played < hands[player_turn].hand.size();
+                card_played = hands[player_turn].hand.get(num_played);
             }
 
             System.out.printf("Card played color: %s\n", card_played.color);
             System.out.printf("Card played value: %s\n", card_played.value);
-            hands[player_turn].hand.remove(num_played);
+           
+            deck.playCard(hands[player_turn].hand.remove(num_played)); // place the card down on discard pile
 
             if(hands[player_turn].hand.size() == 0)
             {
@@ -149,51 +164,54 @@ public class Game
 
             if(card_played.value == Value.SKIP)
             {
-                updateTopCard(card_played.color, card_played.value);
+                updateTopCard();
                 player_turn = (player_turn + direction + hands.length + 1) % hands.length;
             }
             else if(card_played.value == Value.REVERSE)
             {
-                updateTopCard(card_played.color, card_played.value);
+                updateTopCard();
                 player_turn = (player_turn + direction + hands.length) % hands.length;
             }
             else if(card_played.value == Value.COLORSWITCH)
             {
                 Boolean colorIsValid = false;
 
+                kb.nextLine(); // eat newline
                 System.out.println("Please choose a color. The options are blue, yellow, red, green");
-                String colorChosen = kb.nextLine();
-                colorChosen.toLowerCase();
+                String colorChosen = kb.nextLine().toUpperCase();
 
                 while(!colorIsValid)
                 {
-                    if (colorChosen.equals("blue") || colorChosen.equals("yellow") ||
-                        colorChosen.equals("red") || colorChosen.equals("green"))
+                    if (colorChosen.equals("BLUE") || colorChosen.equals("YELLOW") ||
+                        colorChosen.equals("RED") || colorChosen.equals("GREEN"))
                     {
                         colorIsValid = true;
                     }
                     else
                     {
                         System.out.println("Invalid color. Please try again.");
-                        colorChosen = kb.nextLine().toLowerCase(); // update and lowercase again
+                        colorChosen = kb.nextLine().toUpperCase(); // update and lowercase again
                     }
                 }
+
+                // Update color of top card to color chosen by player from wild card
+                card_played.color = Color.valueOf(colorChosen.toUpperCase());
                 
-                if(colorChosen.equals("blue"))
+                if(colorChosen.equals("BLUE"))
                 {
-                    updateTopCard(Color.BLUE, Value.COLORSWITCH);
+                    updateTopCard();
                 }
-                else if(colorChosen.equals("yellow"))
+                else if(colorChosen.equals("YELLOW"))
                 {
-                    updateTopCard(Color.YELLOW, Value.COLORSWITCH);
+                    updateTopCard();
                 }
-                else if(colorChosen.equals("red"))
+                else if(colorChosen.equals("RED"))
                 {
-                    updateTopCard(Color.RED, Value.COLORSWITCH);
+                    updateTopCard();
                 }
-                else if(colorChosen.equals("green"))
+                else if(colorChosen.equals("GREEN"))
                 {
-                    updateTopCard(Color.GREEN, Value.COLORSWITCH);
+                    updateTopCard();
                 }
 
                 player_turn = (player_turn + direction + hands.length) % hands.length;
@@ -202,39 +220,42 @@ public class Game
             {
                 Boolean colorIsValid = false;
 
+                kb.nextLine(); // eat newline
                 System.out.println("Please choose a color. The options are blue, yellow, red, green");
-                String colorChosen = kb.nextLine();
-                colorChosen.toLowerCase();
+                String colorChosen = kb.nextLine().toUpperCase();
 
                 while(!colorIsValid)
                 {
-                    if (colorChosen.equals("blue") || colorChosen.equals("yellow") ||
-                        colorChosen.equals("red") || colorChosen.equals("green"))
+                    if (colorChosen.equals("BLUE") || colorChosen.equals("YELLOW") ||
+                        colorChosen.equals("RED") || colorChosen.equals("GREEN"))
                     {
                         colorIsValid = true;
                     }
                     else
                     {
                         System.out.println("Invalid color. Please try again.");
-                        colorChosen = kb.nextLine().toLowerCase(); // update and lowercase again
+                        colorChosen = kb.nextLine().toUpperCase(); // update and lowercase again
                     }
                 }
                 
-                if(colorChosen.equals("blue"))
+                // Update color of top card to color chosen by player from wild card
+                card_played.color = Color.valueOf(colorChosen.toUpperCase());
+
+                if(colorChosen.equals("BLUE"))
                 {
-                    updateTopCard(Color.BLUE, Value.COLORSWITCH);
+                    updateTopCard();
                 }
-                else if(colorChosen.equals("yellow"))
+                else if(colorChosen.equals("YELLOW"))
                 {
-                    updateTopCard(Color.YELLOW, Value.COLORSWITCH);
+                    updateTopCard();
                 }
-                else if(colorChosen.equals("red"))
+                else if(colorChosen.equals("RED"))
                 {
-                    updateTopCard(Color.RED, Value.COLORSWITCH);
+                    updateTopCard();
                 }
-                else if(colorChosen.equals("green"))
+                else if(colorChosen.equals("GREEN"))
                 {
-                    updateTopCard(Color.GREEN, Value.COLORSWITCH);
+                    updateTopCard();
                 }
                 
                 plusFourPlayed = true;
@@ -244,12 +265,12 @@ public class Game
             else if(card_played.value == Value.PLUSTWO)
             {
                 plusTwoPlayed = true;
-                updateTopCard(card_played.color, card_played.value);
+                updateTopCard();
                 player_turn = (player_turn + direction + hands.length) % hands.length;
             }
             else
             {
-                updateTopCard(card_played.color, card_played.value);
+                updateTopCard();
                 player_turn = (player_turn + direction + hands.length) % hands.length;
             }
         }
