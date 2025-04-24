@@ -1,12 +1,13 @@
 package Game_Logic;
 
+import java.util.Random;
+import java.util.Scanner;
+
 import Game_Parts.Card;
+import Game_Parts.Deck;
 import Game_Parts.Hand;
 import Game_Parts.Types.Color;
 import Game_Parts.Types.Value;
-import Game_Parts.Deck;
-
-import java.util.Scanner;
 
 public class Game 
 {
@@ -16,9 +17,11 @@ public class Game
     Hand hands[];
     Card topCard;
     Deck deck;
+    Boolean CPUgame = false;
     Boolean plusTwoPlayed = false;
     Boolean plusFourPlayed = false;
     int direction = 1;
+
 
     /*
      * Game constructor. Initializes the number of players, and starts the main
@@ -35,7 +38,15 @@ public class Game
                 hands[i] = new Hand(deck);
         }
         
-        gameLoop(); // start game 
+        if(CPUgame)
+        {   //assumes there is only (Player1 vs. CPU) playing
+            CPUgameloop();
+        }
+        else
+        {
+            gameLoop(); // start game for humans
+        }
+        
     }    
 
     /*
@@ -43,7 +54,7 @@ public class Game
      */
     public int playerSetup()
     {
-        System.out.println("How many players? Two minimum, four max.");
+         System.out.println("How many players? Two minimum, four max.");
 
         while(true)
         {
@@ -53,11 +64,25 @@ public class Game
             {
                 System.out.println("Invalid input. Please try again.");
             }
+            else if(num_of_players == 2 )
+            {
+                System.out.println("Play against a computer? (yes/no)");
+                String response = kb.next().toLowerCase();
+                if (response.equals("yes"))
+                {
+                    CPUgame = true;
+                    return num_of_players;
+                }
+                else{
+                    return num_of_players;
+                }
+            }
             else
             {
                 return num_of_players;
             }
         }
+
     }
 
     public void updateTopCard()
@@ -157,8 +182,8 @@ public class Game
             deck.playCard(hands[player_turn].hand.remove(num_played)); // place the card down on discard pile
 
             if(hands[player_turn].hand.size() == 0)
-            {
-                System.out.printf("Player %d wins!\n", player_turn);
+            {   
+                System.out.printf("Player %d wins!\n", player_turn + 1);
                 break;
             }
 
@@ -274,5 +299,259 @@ public class Game
                 player_turn = (player_turn + direction + hands.length) % hands.length;
             }
         }
+    }
+
+
+    //EVERYTHING BELOW HERE IS USED FOR CPU GAME LOGIC
+    //tldr its basically the same exact method at gameloop()
+    //     BUT assumes player2 is a CPU and will span inputs until valid
+    // TODO Clean up outputs so you can see what CPU cards are played
+     public String getRandomColor() // should select a color at random
+    {
+        String[] colors = {"Blue", "Red", "Green", "Yellow"};
+        Random rand = new Random();
+        int index = rand.nextInt(colors.length); // generates a number between 0 and 3
+        return colors[index];
+    }
+
+    public void CPUgameloop()
+    {
+        updateTopCard(); // Initialize top card
+        //assume that first turn will never be the computer player 
+        Boolean computerTurn = false;
+
+        while(true)
+        {   
+            if(player_turn == 0)
+            {   // Player1 is never CPU
+                computerTurn = false;
+            }
+            else if (player_turn == 1)
+            {   // Player2 IS a cpu 
+                computerTurn = true;
+            }
+            
+
+            System.out.printf("Top card color: %s\n", topCard.color);
+            System.out.printf("Top card type: %s\n", topCard.value);
+            if(plusTwoPlayed)
+            {
+                //Draw two cards
+                hands[player_turn].addCards(deck.drawMultipleCards(2));
+                plusTwoPlayed = false;
+            }
+            else if(plusFourPlayed)
+            {
+                //Draw four cards
+                hands[player_turn].addCards(deck.drawMultipleCards(4));
+                plusFourPlayed = false;
+            }
+
+            if(!computerTurn) //if !computerTurn should detect if the computer is playing and just not display their cards
+            { //if bugs then remove this if wrapping
+                System.out.printf("Player %d's turn\n", player_turn + 1);
+                System.out.printf("Player %d's cards\n", player_turn + 1);
+            }
+            
+            while (!handIsValid(hands[player_turn]))
+            {
+                //Draw cards until a valid card can be played
+                hands[player_turn].addCard(deck.drawCard());
+            }
+
+            if(!computerTurn)
+            {
+                for(int i = 0; i < hands[player_turn].hand.size(); i++)
+                {
+                    System.out.printf("Card %d:\n Color: %s\n", i + 1,
+                                        hands[player_turn].hand.get(i).color);
+                    System.out.printf(" Card Type: %s\n", 
+                                        hands[player_turn].hand.get(i).value);
+                }
+            }
+            
+            if(!computerTurn)
+            {
+                System.out.println("What card do you want to play? Please select the number printed");
+            }
+
+            //trying to jam a valid number if it is the computer player 
+            // (will literally play anything that is the first valid card it sees #1 --> #7)
+            int num_played;
+            if(computerTurn)
+            { // trying to jam numbers her until valid // very stupid computer player logic 
+                num_played = 0;
+                while (is_Valid(hands[player_turn].hand.get(num_played)) == false)
+                {
+                    num_played++;
+                }
+                
+            }
+            else 
+            {
+                num_played = kb.nextInt() - 1;
+            }
+            
+            //og was here
+            //num_played = kb.nextInt() - 1;
+            Boolean index_valid = num_played >= 0 && num_played < hands[player_turn].hand.size();
+            Card card_played = hands[player_turn].hand.get(num_played);
+
+            while(!index_valid || !is_Valid(card_played))
+            {
+                System.out.println("=================================");
+                System.out.println("is_Valid: " + is_Valid(card_played));
+                System.out.println("index_valid: " + index_valid);
+                System.out.println("=================================");
+                System.out.println("Invalid card. Please enter again.");
+                num_played = kb.nextInt() - 1;
+
+                // update index and card chosen 
+                index_valid = num_played >= 0 && num_played < hands[player_turn].hand.size();
+                card_played = hands[player_turn].hand.get(num_played);
+            }
+
+            System.out.printf("Card played color: %s\n", card_played.color);
+            System.out.printf("Card played value: %s\n", card_played.value);
+           
+            deck.playCard(hands[player_turn].hand.remove(num_played)); // place the card down on discard pile
+
+            if(hands[player_turn].hand.size() == 0)
+            {
+                System.out.printf("Player %d wins!\n", player_turn + 1);
+                break;
+            }
+
+            if(card_played.value == Value.SKIP)
+            {
+                updateTopCard();
+                player_turn = (player_turn + direction + hands.length + 1) % hands.length;
+            }
+            else if(card_played.value == Value.REVERSE)
+            {
+                updateTopCard();
+                player_turn = (player_turn + direction + hands.length) % hands.length;
+            }
+            else if(card_played.value == Value.COLORSWITCH)
+            {
+                Boolean colorIsValid = false;
+
+                kb.nextLine(); // eat newline
+                
+                String colorChosen = "";
+                if(computerTurn)
+                {//say random color 
+                    colorChosen = getRandomColor().toUpperCase();
+                }
+                else
+                {
+                    System.out.println("Please choose a color. The options are blue, yellow, red, green");
+                    colorChosen = kb.nextLine().toUpperCase();
+                }
+                
+                while(!colorIsValid)
+                {
+                    if (colorChosen.equals("BLUE") || colorChosen.equals("YELLOW") ||
+                        colorChosen.equals("RED") || colorChosen.equals("GREEN"))
+                    {
+                        colorIsValid = true;
+                    }
+                    else
+                    {
+                        System.out.println("Invalid color. Please try again.");
+                        colorChosen = kb.nextLine().toUpperCase(); // update and lowercase again
+                    }
+                }
+
+                // Update color of top card to color chosen by player from wild card
+                card_played.color = Color.valueOf(colorChosen.toUpperCase());
+                
+                if(colorChosen.equals("BLUE"))
+                {
+                    updateTopCard();
+                }
+                else if(colorChosen.equals("YELLOW"))
+                {
+                    updateTopCard();
+                }
+                else if(colorChosen.equals("RED"))
+                {
+                    updateTopCard();
+                }
+                else if(colorChosen.equals("GREEN"))
+                {
+                    updateTopCard();
+                }
+
+                player_turn = (player_turn + direction + hands.length) % hands.length;
+            }
+            else if(card_played.value == Value.PLUSFOUR)
+            {
+                Boolean colorIsValid = false;
+
+                kb.nextLine(); // eat newline
+                System.out.println("Please choose a color. The options are blue, yellow, red, green");
+                String colorChosen = "";
+
+                if(computerTurn)
+                {//say random color
+                    colorChosen = getRandomColor().toUpperCase();
+                }
+                else
+                {
+                    colorChosen = kb.nextLine().toUpperCase();
+                }
+                
+                while(!colorIsValid)
+                {
+                    if (colorChosen.equals("BLUE") || colorChosen.equals("YELLOW") ||
+                        colorChosen.equals("RED") || colorChosen.equals("GREEN"))
+                    {
+                        colorIsValid = true;
+                    }
+                    else
+                    {
+                        System.out.println("Invalid color. Please try again.");
+                        colorChosen = kb.nextLine().toUpperCase(); // update and lowercase again
+                    }
+                }
+                
+                // Update color of top card to color chosen by player from wild card
+                card_played.color = Color.valueOf(colorChosen.toUpperCase());
+
+                if(colorChosen.equals("BLUE"))
+                {
+                    updateTopCard();
+                }
+                else if(colorChosen.equals("YELLOW"))
+                {
+                    updateTopCard();
+                }
+                else if(colorChosen.equals("RED"))
+                {
+                    updateTopCard();
+                }
+                else if(colorChosen.equals("GREEN"))
+                {
+                    updateTopCard();
+                }
+                
+                plusFourPlayed = true;
+
+                player_turn = (player_turn + direction + hands.length) % hands.length;
+            }
+            else if(card_played.value == Value.PLUSTWO)
+            {
+                plusTwoPlayed = true;
+                updateTopCard();
+                player_turn = (player_turn + direction + hands.length) % hands.length;
+            }
+            else
+            {
+                updateTopCard();
+                player_turn = (player_turn + direction + hands.length) % hands.length;
+            }
+        }
+
     }
 }
