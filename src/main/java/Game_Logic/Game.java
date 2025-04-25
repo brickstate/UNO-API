@@ -70,6 +70,7 @@ public class Game
                 String response = kb.next().toLowerCase();
                 if (response.equals("yes"))
                 {
+                    //TODO Update "Is_CPU_Game" field in GameState Table
                     CPUgame = true;
                     return num_of_players;
                 }
@@ -122,13 +123,17 @@ public class Game
     }
 
     public void gameLoop()
-    {
+    {   
         updateTopCard(); // Initialize top card
-
+        
+        //TODO add error handling for kb input NAN's
         while(true)
         {
             System.out.printf("Top card color: %s\n", topCard.color);
             System.out.printf("Top card type: %s\n", topCard.value);
+            //TODO Update "Top_Card" in Hands Table
+            //     change last_updated time in game_state Tabl
+
             if(plusTwoPlayed)
             {
                 //Draw two cards
@@ -141,6 +146,10 @@ public class Game
                 hands[player_turn].addCards(deck.drawMultipleCards(4));
                 plusFourPlayed = false;
             }
+
+            //TODO 1. add in USERNAME to print to the screen
+            //     2. add "COMPUTER's turn" to print for cpu
+            //     change last_updated time in game_state Tabl
 
             System.out.printf("Player %d's turn\n", player_turn + 1);
             System.out.printf("Player %d's cards\n", player_turn + 1);
@@ -156,6 +165,11 @@ public class Game
                 System.out.printf("Card %d:\n Color: %s\n", i + 1, hands[player_turn].hand.get(i).color);
                 System.out.printf(" Card Type: %s\n", hands[player_turn].hand.get(i).value);
             }
+            //TODO Update current Player# In_Hand field for Hands Table
+            //     should be able to keep track of the actual cards in hand
+            //     change last_updated time in game_state Tabl
+
+
 
             System.out.println("What card do you want to play? Please select the number printed");
             int num_played = kb.nextInt() - 1;
@@ -163,7 +177,7 @@ public class Game
             Card card_played = hands[player_turn].hand.get(num_played);
 
             while(!index_valid || !is_Valid(card_played))
-            {
+            {   
                 System.out.println("=================================");
                 System.out.println("is_Valid: " + is_Valid(card_played));
                 System.out.println("index_valid: " + index_valid);
@@ -176,13 +190,22 @@ public class Game
                 card_played = hands[player_turn].hand.get(num_played);
             }
 
+            //TODO format output as "USERNAME played card color: ??"
+            //     change last_updated time in game_state Tabl
             System.out.printf("Card played color: %s\n", card_played.color);
             System.out.printf("Card played value: %s\n", card_played.value);
            
             deck.playCard(hands[player_turn].hand.remove(num_played)); // place the card down on discard pile
+            // TODO 1.Update Discard field in Hands Table
+            //      2.Update this.Player# hand field in Hands Table 
+            //     change last_updated time in game_state Tabl
 
             if(hands[player_turn].hand.size() == 0)
             {   
+                //TODO Update game_state table's winner field
+                //     Trigger a POST for new entry in Completed_Games Table
+                //     change last_updated time in game_state Table
+
                 System.out.printf("Player %d wins!\n", player_turn + 1);
                 break;
             }
@@ -305,7 +328,7 @@ public class Game
     //EVERYTHING BELOW HERE IS USED FOR CPU GAME LOGIC
     //tldr its basically the same exact method at gameloop()
     //     BUT assumes player2 is a CPU and will span inputs until valid
-    // TODO Clean up outputs so you can see what CPU cards are played
+    // Clean up outputs so you can see what CPU cards are played
      public String getRandomColor() // should select a color at random
     {
         String[] colors = {"Blue", "Red", "Green", "Yellow"};
