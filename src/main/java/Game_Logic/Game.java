@@ -337,6 +337,57 @@ public class Game
         return colors[index];
     }
 
+    public Boolean checkCPUTurn() 
+    {   //during each new turn check to see if the current turn is a CPU
+        Boolean check = false;
+        if(player_turn == 0)
+            {   // Player1 is never CPU
+                check = false;
+            }
+            else if (player_turn == 1 && CPUgame)
+            {   // Player2 IS a cpu 
+                check = true;
+            }
+        return check;
+    }
+
+    public String printTopCard()
+    {   
+        String card = "";
+        System.out.printf("Top card: %s %s\n", topCard.color, topCard.value);
+        card = "Top card:" + topCard.color + " " + topCard.value;
+        return card; 
+    }
+
+    //TODO wasPlusPlayed()
+    public int wasPlusPlayed()
+    {
+        if(plusTwoPlayed)
+            {
+                //Draw two cards
+                hands[player_turn].addCards(deck.drawMultipleCards(2));
+                plusTwoPlayed = false;
+                return 2; 
+            }
+            else if(plusFourPlayed)
+            {
+                //Draw four cards
+                hands[player_turn].addCards(deck.drawMultipleCards(4));
+                plusFourPlayed = false;
+                return 4;
+            }
+        return 0;
+    }
+
+    public String printPlayerTurn() 
+    {
+        String playerturn = "";
+        System.out.printf("Player %d's turn\n", player_turn + 1);
+        System.out.printf("Player %d's cards\n", player_turn + 1);
+        playerturn = "Player " + player_turn + 1 + "\n";
+        return playerturn;
+    }
+
     public void CPUgameloop()
     {
         updateTopCard(); // Initialize top card
@@ -345,35 +396,17 @@ public class Game
 
         while(true)
         {   
-            if(player_turn == 0)
-            {   // Player1 is never CPU
-                computerTurn = false;
-            }
-            else if (player_turn == 1)
-            {   // Player2 IS a cpu 
-                computerTurn = true;
-            }
+            computerTurn = checkCPUTurn();    
             
-
-            System.out.printf("Top card color: %s\n", topCard.color);
-            System.out.printf("Top card type: %s\n", topCard.value);
-            if(plusTwoPlayed)
-            {
-                //Draw two cards
-                hands[player_turn].addCards(deck.drawMultipleCards(2));
-                plusTwoPlayed = false;
-            }
-            else if(plusFourPlayed)
-            {
-                //Draw four cards
-                hands[player_turn].addCards(deck.drawMultipleCards(4));
-                plusFourPlayed = false;
-            }
+            //return top card COLOR VALUE  comes out as a string
+            printTopCard();
+            
+            //update hand[player_turn] if +2 or +4 was played LAST turn
+            wasPlusPlayed();
 
             if(!computerTurn) //if !computerTurn should detect if the computer is playing and just not display their cards
             { //if bugs then remove this if wrapping
-                System.out.printf("Player %d's turn\n", player_turn + 1);
-                System.out.printf("Player %d's cards\n", player_turn + 1);
+                printPlayerTurn();
             }
             
             while (!handIsValid(hands[player_turn]))
