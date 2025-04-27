@@ -532,4 +532,42 @@ public class UnoServer {
         }
     };
   }
+
+  public static void checkOldGames() {
+    String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+    String user = "testuser";
+    String password = "123";
+
+    try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+        // Select games older than 24 hours
+        String selectOldGamesSql = "SELECT * FROM Game_Playing WHERE created_at < NOW() - INTERVAL 1 DAY";
+        PreparedStatement selectStmt = conn.prepareStatement(selectOldGamesSql);
+        ResultSet rs = selectStmt.executeQuery();
+
+        while (rs.next()) {
+            int gameId = rs.getInt("Game_ID");
+            String gameState = rs.getString("game_state");
+            boolean isCpuGame = rs.getBoolean("Is_CPU_Game");
+
+            // Insert the old game into Game_Completed
+            String insertSql = "INSERT INTO Game_Completed (Game_ID, game_state, Is_CPU_Game, completed_at) VALUES (?, ?, ?, NOW())";
+            PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+            insertStmt.setInt(1, gameId);
+            insertStmt.setString(2, gameState);
+            insertStmt.setBoolean(3, isCpuGame);
+            insertStmt.executeUpdate();
+
+            // Delete the game from Game_Playing
+            String deleteSql = "DELETE FROM Game_Playing WHERE game_id = ?";
+            PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+            deleteStmt.setInt(1, gameId);
+            deleteStmt.executeUpdate();
+
+            //System.out.println("Moved game ID " + gameId + " to completed games.");
+        }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
