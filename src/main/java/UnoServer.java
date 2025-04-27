@@ -281,6 +281,15 @@ public class UnoServer {
                 updateStmt.setInt(2, gameId);
                 updateStmt.executeUpdate();
 
+                //auto setup of COMPUTER player2 in Hands
+                PreparedStatement updateStmt2 = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Player_2 = ? WHERE Game_Id = ?"
+                );
+                updateStmt2.setString(1, "COMPUTER");
+                updateStmt2.setInt(2, gameId);
+                updateStmt2.executeUpdate();
+
+
                 ctx.status(201).result("CPU Game created with ID: " + gameId);
             } else {
                 ctx.status(500).result("Failed to create game");
