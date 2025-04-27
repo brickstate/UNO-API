@@ -91,9 +91,9 @@ public class Game
         topCard = deck.peekDiscard();
     }
 
-    public Boolean is_Valid(Card card)
+    public static Boolean is_Valid(Card card, Card passedtopCard)
     {   
-        if(card.value == topCard.value || card.color == topCard.color)
+        if(card.value == passedtopCard.value || card.color == passedtopCard.color)
         {
             return true;
         }
@@ -113,7 +113,7 @@ public class Game
 
         for(int i = 0; i < hands[player_turn].hand.size(); i++)
         {
-            if(is_Valid(player_hand.hand.get(i)))
+            if(is_Valid(player_hand.hand.get(i), this.topCard))
             {
                 anyIsInvalid = anyIsInvalid | true;
             }
@@ -178,10 +178,10 @@ public class Game
             Boolean index_valid = num_played >= 0 && num_played < hands[player_turn].hand.size();
             Card card_played = hands[player_turn].hand.get(num_played);
 
-            while(!index_valid || !is_Valid(card_played))
+            while(!index_valid || !is_Valid(card_played, this.topCard))
             {   
                 System.out.println("=================================");
-                System.out.println("is_Valid: " + is_Valid(card_played));
+                System.out.println("is_Valid: " + is_Valid(card_played, this.topCard));
                 System.out.println("index_valid: " + index_valid);
                 System.out.println("=================================");
                 System.out.println("Invalid card. Please enter again.");
@@ -407,7 +407,7 @@ public class Game
             if(computerTurn)
             { // trying to jam numbers her until valid // very stupid computer player logic 
                 num_played = 0;
-                while (is_Valid(hands[player_turn].hand.get(num_played)) == false)
+                while (is_Valid(hands[player_turn].hand.get(num_played), this.topCard) == false)
                 {
                     num_played++;
                 }
@@ -423,10 +423,10 @@ public class Game
             Boolean index_valid = num_played >= 0 && num_played < hands[player_turn].hand.size();
             Card card_played = hands[player_turn].hand.get(num_played);
 
-            while(!index_valid || !is_Valid(card_played))
+            while(!index_valid || !is_Valid(card_played, this.topCard))
             {
                 System.out.println("=================================");
-                System.out.println("is_Valid: " + is_Valid(card_played));
+                System.out.println("is_Valid: " + is_Valid(card_played, this.topCard));
                 System.out.println("index_valid: " + index_valid);
                 System.out.println("=================================");
                 System.out.println("Invalid card. Please enter again.");
@@ -579,5 +579,27 @@ public class Game
             }
         }
 
+    }
+
+    //EVERYTHING BELOW HERE IS JUST USED AS HELP FOR ENDPOINTS
+
+    //Takes an index for the number played and the playerHand. Makes sure it can be played 
+    //and returns the card if it can be. Otherwise return null.
+    public static Card playCard(int num_played, Hand playerHand, Card passedTopCard)
+    {
+        Card card_played = playerHand.hand.get(num_played);
+        
+        // If the card cannot be played, return nothing
+        if(!is_Valid(card_played, passedTopCard))
+        {
+            return null;
+        }
+
+        card_played = playerHand.hand.get(num_played);
+            
+        System.out.printf("Card played color: %s\n", card_played.color);
+        System.out.printf("Card played value: %s\n", card_played.value);
+           
+        return card_played;
     }
 }
