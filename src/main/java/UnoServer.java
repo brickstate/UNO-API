@@ -98,8 +98,10 @@ public class UnoServer {
 
         //plays a card
         app.post("/playCard", playCard());
-        
 
+        // Moves old games into the Completed_Games table
+        app.delete("/checkOldGames", checkOldGames());
+        
         //Leaving this here Until I need to delete it 
         // Endpoint for testing
         //app.post("/users/register", ctx -> {
@@ -535,7 +537,7 @@ public class UnoServer {
     };
   }
 
-  public static void checkOldGames() {
+  public static Handler checkOldGames() {
     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
