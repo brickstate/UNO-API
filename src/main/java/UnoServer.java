@@ -1,14 +1,21 @@
 package main.java;
 
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 import io.javalin.Javalin;
 import io.javalin.http.Handler;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import Game_Parts.Card;
+import Game_Parts.GameState;
+import Game_Parts.Player;
+import Game_Parts.Deck;
 
 
 //This is the "Game Server" which in the grand scheme of the project should:
@@ -24,7 +31,7 @@ import io.javalin.http.Handler;
 //Things to fully test (in loose order) 
 // 1. Register a user [/register]
 // 2. Display All usernames [/users] (should already be fully functionaly just need to make sure)
-// 3. Disscuss and establish a standard way of getting the UnoServer to call the GameLOGIC functions
+// 3. Discuss and establish a standard way of getting the UnoServer to call the GameLOGIC functions
 //    - Game LOGIC should handle all turn validation/ JSON outputs for Discard Pile, Draw Pile, 
 //       Displaying Card Count in user hand
 //    !!! for the "I have one card and didnt say uno so now i must draw x more cards" mechanic
@@ -68,10 +75,23 @@ public class UnoServer {
         //this will get all of the users from the "users" table (works)
         app.get("/listUsers", listUsers()); 
 
-        // adds a new user to the database (works)  
+        //adds a new user to the database (works)  
         app.post("/registerUser", registerUser());
 
+        //creates a new cpu game to be played
+        app.post("/createCPUGame", createCPUGame());
 
+        //creates a game with players
+        app.post("/createPlayerGame", createPlayerGame());
+
+        //lets a user join the game
+        app.post("/joinGame", joinGame());
+
+        //grabs the game state
+        app.get("/gameState/{gameId}", getGameState());
+
+        //plays a card
+        app.post("/playCard", playCard());
         
 
         //Leaving this here Until I need to delete it 
@@ -184,6 +204,242 @@ public class UnoServer {
     }
     };
   }
+
+  public static GameState generateNewGameState() 
+  {
+    GameState game = new GameState();
+    Deck deck = new Deck();
+    game.gameId = 0; // Will be set later if needed
+    game.players = new ArrayList<>();
+    game.deck = deck; // You can define this
+    game.discardPile = new ArrayList<>();
+    game.currentTurn = 0;
+    game.direction = "clockwise";
+    game.activeEffect = null;
+    game.chosenColor = null;
+    game.isGameOver = false;
+    game.winner = null;
+    return game;
+  }
+
+
+  public static Handler createCPUGame() 
+  {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+
+        return ctx -> {
+                try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+                {
+                    String initialStateJson = 
+                    "{\"gameId\":0," +
+                    "\"players\":[]," +
+                    "\"deck\":{\"cards\":[]}," +
+                    "\"discardPile\":[]," +
+                    "\"currentTurn\":0," +
+                    "\"direction\":\"clockwise\"," +
+                    "\"activeEffect\":null," +
+                    "\"chosenColor\":null," +
+                    "\"isGameOver\":false," +
+                    "\"winner\":null}";
+                
+                    GameState newGame = new GameState();
+                    ObjectMapper mapper = new ObjectMapper();
+                    initialStateJson = mapper.writeValueAsString(newGame);
+
+                PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO Game_Playing (game_state) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, initialStateJson);
+                stmt.executeUpdate();
+
+                ResultSet keys = stmt.getGeneratedKeys();
+                if (keys.next()) 
+                {
+                    int gameId = keys.getInt(1);
+                    ctx.status(201).result("Game created with ID: " + gameId);
+                } 
+                else 
+                {
+                    ctx.status(500).result("Failed to create game");
+                }
+            }
+        };
+    }
+
+    public static Handler createPlayerGame() 
+    {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+
+        return ctx -> {
+                try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+                {
+                    String initialStateJson = 
+                    "{\"gameId\":0," +
+                    "\"players\":[]," +
+                    "\"deck\":{\"cards\":[]}," +
+                    "\"discardPile\":[]," +
+                    "\"currentTurn\":0," +
+                    "\"direction\":\"clockwise\"," +
+                    "\"activeEffect\":null," +
+                    "\"chosenColor\":null," +
+                    "\"isGameOver\":false," +
+                    "\"winner\":null}";
+                
+                    GameState newGame = new GameState();
+                    ObjectMapper mapper = new ObjectMapper();
+                    initialStateJson = mapper.writeValueAsString(newGame);
+
+                PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO Game_Playing (game_state) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, initialStateJson);
+                stmt.executeUpdate();
+
+                ResultSet keys = stmt.getGeneratedKeys();
+                if (keys.next()) 
+                {
+                    int gameId = keys.getInt(1);
+                    ctx.status(201).result("Game created with ID: " + gameId);
+                } 
+                else 
+                {
+                    ctx.status(500).result("Failed to create game");
+                }
+            }
+        };
+    }
+
+    public static Handler joinGame() 
+    {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+
+        return ctx -> {
+            int gameId = Integer.parseInt(ctx.formParam("gameId"));
+            String username = ctx.formParam("username");
+
+            // Load game state JSON
+            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+            {
+                PreparedStatement selectStmt = conn.prepareStatement(
+                    "SELECT game_state FROM Game_Playing WHERE game_id = ?");
+                selectStmt.setInt(1, gameId);
+                ResultSet rs = selectStmt.executeQuery();
+
+                if (rs.next()) 
+                {
+                    String json = rs.getString("game_state");
+                    ObjectMapper mapper = new ObjectMapper();
+                    GameState game = mapper.readValue(json, GameState.class);
+
+                    // Add player if not already in game
+                    if (game.players.stream().noneMatch(p -> p.username.equals(username))) 
+                    {
+                        Player newPlayer = new Player(username); // or load full Player object
+                        game.players.add(newPlayer);
+
+                        String updatedJson = mapper.writeValueAsString(game);
+                        PreparedStatement updateStmt = conn.prepareStatement(
+                            "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?");
+                        updateStmt.setString(1, updatedJson);
+                        updateStmt.setInt(2, gameId);
+                        updateStmt.executeUpdate();
+
+                        ctx.result("Player added to game.");
+                    } 
+                    else 
+                    {
+                        ctx.result("Player already in game.");
+                    }
+                } 
+                else 
+                {
+                    ctx.status(404).result("Game not found.");
+                }
+            }
+        };
+    }
+
+
+
+    public static Handler getGameState() 
+    {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+
+        return ctx -> {
+            int gameId = Integer.parseInt(ctx.pathParam("gameId"));
+            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+                PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT game_state FROM Game_Playing WHERE game_id = ?");
+                stmt.setInt(1, gameId);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    ctx.result(rs.getString("game_state"));
+                } else {
+                    ctx.status(404).result("Game not found.");
+                }
+            }
+        };
+    }
+
+    /*
+     * 
+     curl -X POST http://localhost:7000/playCard \
+     -d "gameId=1" \
+     -d "username=alice" \
+     -d "card={\"color\":\"red\",\"value\":\"5\"}"
+     * 
+     */
+    public static Handler playCard() {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+    
+        return ctx -> {
+            int gameId = Integer.parseInt(ctx.formParam("gameId"));
+            String cardJson = ctx.formParam("card"); // JSON like {"color":"red","value":"5"}
+    
+            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+                // Load game state
+                PreparedStatement selectStmt = conn.prepareStatement(
+                    "SELECT game_state FROM Game_Playing WHERE game_id = ?");
+                selectStmt.setInt(1, gameId);
+                ResultSet rs = selectStmt.executeQuery();
+    
+                if (!rs.next()) {
+                    ctx.status(404).result("Game not found.");
+                    return;
+                }
+    
+                ObjectMapper mapper = new ObjectMapper();
+                GameState game = mapper.readValue(rs.getString("game_state"), GameState.class);
+                Card card = mapper.readValue(cardJson, Card.class);
+    
+                // Use updated logic without username
+                //GameLogic.playCard(game, card);
+    
+                // Save updated state
+                String updatedJson = mapper.writeValueAsString(game);
+                PreparedStatement updateStmt = conn.prepareStatement(
+                    "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?");
+                updateStmt.setString(1, updatedJson);
+                updateStmt.setInt(2, gameId);
+                updateStmt.executeUpdate();
+    
+                ctx.result("Card played.");
+            } catch (Exception e) {
+                e.printStackTrace();
+                ctx.status(500).result("Failed to play card: " + e.getMessage());
+            }
+        };
+    }
+    
 
   public static Handler helpEndpoint() {
     // verbose help dialogue which we can add too in order
