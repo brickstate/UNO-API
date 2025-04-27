@@ -331,8 +331,9 @@ public class UnoServer {
         String password = "123";
 
         return ctx -> {
-            int gameId = Integer.parseInt(ctx.formParam("gameId"));
-            String username = ctx.formParam("username");
+            int gameId = Integer.parseInt(ctx.pathParam("gameId"));
+            String username = ctx.pathParam("username");
+
 
             // Load game state JSON
             try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
@@ -341,7 +342,8 @@ public class UnoServer {
 
                 //first check gameId is valid created game
                  // Check if gameId exists
-            String selectQuery = "SELECT * FROM Games_Playing WHERE Game_Id = ?";
+                 String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_Id = ?";
+
                 try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
                     selectStmt.setInt(1, gameId);
                     ResultSet rs = selectStmt.executeQuery();
@@ -351,16 +353,17 @@ public class UnoServer {
                         return;
                     }
     
-                    String player1 = rs.getString("Player1");
-                    String player2 = rs.getString("Player2");
-                    String player3 = rs.getString("Player3");
-                    String player4 = rs.getString("Player4");
+                    String player1 = rs.getString("Player_1");
+                    String player2 = rs.getString("Player_2");
+                    String player3 = rs.getString("Player_3");
+                    String player4 = rs.getString("Player_4");
     
                     // If Player1 is null, assign username
                     // checks other names if p1 is taken
                     if (player1 == null) 
                     {
-                        String updateQuery = "UPDATE Games SET Player1 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_1 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -371,7 +374,8 @@ public class UnoServer {
                     } 
                     else if ( player1 != null && player2 == null)
                     {
-                        String updateQuery = "UPDATE Games SET Player2 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_2 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -382,7 +386,8 @@ public class UnoServer {
                     }
                     else if ( player1 != null && player2 != null && player3 == null)
                     {
-                        String updateQuery = "UPDATE Games SET Player3 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_3 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -393,7 +398,8 @@ public class UnoServer {
                     }
                     else if ( player1 != null && player2 != null && player3 != null && player4 == null)
                     {
-                        String updateQuery = "UPDATE Games SET Player4 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_4 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
