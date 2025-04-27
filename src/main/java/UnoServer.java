@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 
 import io.javalin.Javalin;
 import io.javalin.http.Handler;
@@ -537,11 +539,14 @@ public class UnoServer {
     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
+    int gameTimeout = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
     try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
         // Select games older than 24 hours
-        String selectOldGamesSql = "SELECT * FROM Game_Playing WHERE created_at < NOW() - INTERVAL 1 DAY";
+        String selectOldGamesSql = "SELECT Game ID FROM Game_Playing WHERE Recent Update < ?";
         PreparedStatement selectStmt = conn.prepareStatement(selectOldGamesSql);
+        long cutoffTime = new Date().getTime() - gameTimeout;
+        selectStmt.setTimestamp(1, new Timestamp(cutoffTime));
         ResultSet rs = selectStmt.executeQuery();
 
         while (rs.next()) {
@@ -560,6 +565,12 @@ public class UnoServer {
             // Delete the game from Game_Playing
             String deleteSql = "DELETE FROM Game_Playing WHERE game_id = ?";
             PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+            deleteStmt.setInt(1, gameId);
+            deleteStmt.executeUpdate();
+
+            // Delete the game from Hands_In_Game table
+            String deleteHandsSql = "DELETE FROM Hands_In_Game WHERE game_id = ?";
+            PreparedStatement deleteHandsStmt = conn.prepareStatement(deleteHandsSql);
             deleteStmt.setInt(1, gameId);
             deleteStmt.executeUpdate();
 
