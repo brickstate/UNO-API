@@ -4,17 +4,20 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-
-import io.javalin.Javalin;
-import io.javalin.http.Handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import Game_Parts.Card;
+import Game_Parts.Deck;
 import Game_Parts.GameState;
 import Game_Parts.Player;
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+import io.javalin.http.Handler;
+
 import Game_Parts.Deck;
 import Game_Logic.Game;
 import Game_Parts.Hand;
@@ -91,7 +94,7 @@ public class UnoServer {
         //app.post("/startGame", startGame());
 
         //lets a user join the game
-        app.post("/joinGame", joinGame());
+        app.get("/joinGame/{gameId}/{username}", UnoServer::joinGame);
 
         //grabs the game state
         app.get("/gameState/{gameId}", getGameState());
@@ -321,19 +324,98 @@ public class UnoServer {
         };
     }
 
-    public static Handler joinGame() 
+    public static void joinGame(Context ctx) 
     {
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
-        return ctx -> {
+       // return ctx -> {
             int gameId = Integer.parseInt(ctx.formParam("gameId"));
             String username = ctx.formParam("username");
 
             // Load game state JSON
             try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
             {
+                //need to update Hands table with gameId/username -->
+
+                //first check gameId is valid created game
+                 // Check if gameId exists
+            String selectQuery = "SELECT * FROM Games WHERE gameId = ?";
+                try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
+                    selectStmt.setInt(1, gameId);
+                    ResultSet rs = selectStmt.executeQuery();
+    
+                    if (!rs.next()) {
+                        ctx.status(404).result("Game not found.");
+                        return;
+                    }
+    
+                    String player1 = rs.getString("Player1");
+                    String player2 = rs.getString("Player2");
+                    String player3 = rs.getString("Player3");
+                    String player4 = rs.getString("Player4");
+    
+                    // If Player1 is null, assign username
+                    // checks other names if p1 is taken
+                    if (player1 == null) 
+                    {
+                        String updateQuery = "UPDATE Games SET Player1 = ? WHERE gameId = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
+                        {
+                            updateStmt.setString(1, username);
+                            updateStmt.setInt(2, gameId);
+                            updateStmt.executeUpdate();
+                            ctx.result("User " + username + " successfully joined as Player1.");
+                        }
+                    } 
+                    else if ( player1 != null && player2 == null)
+                    {
+                        String updateQuery = "UPDATE Games SET Player2 = ? WHERE gameId = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
+                        {
+                            updateStmt.setString(1, username);
+                            updateStmt.setInt(2, gameId);
+                            updateStmt.executeUpdate();
+                            ctx.result("User " + username + " successfully joined as Player2.");
+                        }
+                    }
+                    else if ( player1 != null && player2 != null && player3 == null)
+                    {
+                        String updateQuery = "UPDATE Games SET Player3 = ? WHERE gameId = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
+                        {
+                            updateStmt.setString(1, username);
+                            updateStmt.setInt(2, gameId);
+                            updateStmt.executeUpdate();
+                            ctx.result("User " + username + " successfully joined as Player3.");
+                        }
+                    }
+                    else if ( player1 != null && player2 != null && player3 != null && player4 == null)
+                    {
+                        String updateQuery = "UPDATE Games SET Player4 = ? WHERE gameId = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
+                        {
+                            updateStmt.setString(1, username);
+                            updateStmt.setInt(2, gameId);
+                            updateStmt.executeUpdate();
+                            ctx.result("User " + username + " successfully joined as Player4.");
+                        }
+                    }
+                    else
+                     {
+                        ctx.status(409).result("Player1, Player2, Player3, and Player4 slot already taken.");
+                    }
+
+
+
+
+
+                }
+
+
+/* 
+                // begining of junk //////////////////////
                 PreparedStatement selectStmt = conn.prepareStatement(
                     "SELECT game_state FROM Game_Playing WHERE game_id = ?");
                 selectStmt.setInt(1, gameId);
@@ -369,8 +451,15 @@ public class UnoServer {
                 {
                     ctx.status(404).result("Game not found.");
                 }
+                // end of junk ///////////////
+                */
+
             }
-        };
+            catch (SQLException e) {
+            e.printStackTrace();
+            ctx.status(500).result("Internal server error: " + e.getMessage());
+        }
+        //};
     }
 
 
