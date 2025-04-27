@@ -227,49 +227,54 @@ public class UnoServer {
   }
 
 
-  public static Handler createCPUGame() 
-  {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+  public static Handler createCPUGame() {
+    String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+    String user = "testuser";
+    String password = "123";
 
-        return ctx -> {
-                try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
-                {
-                    String initialStateJson = 
-                    "{\"gameId\":0," +
-                    "\"players\":[]," +
-                    "\"deck\":{\"cards\":[]}," +
-                    "\"discardPile\":[]," +
-                    "\"currentTurn\":0," +
-                    "\"direction\":\"clockwise\"," +
-                    "\"activeEffect\":null," +
-                    "\"chosenColor\":null," +
-                    "\"isGameOver\":false," +
-                    "\"winner\":null}";
-                
-                    GameState newGame = new GameState();
-                    ObjectMapper mapper = new ObjectMapper();
-                    initialStateJson = mapper.writeValueAsString(newGame);
+    return ctx -> {
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+            GameState newGame = generateNewGameState();
 
-                PreparedStatement stmt = conn.prepareStatement(
-                    "INSERT INTO Game_Playing (game_state) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
-                stmt.setString(1, initialStateJson);
-                stmt.executeUpdate();
+            ObjectMapper mapper = new ObjectMapper();
+            String initialStateJson = mapper.writeValueAsString(newGame);
 
-                ResultSet keys = stmt.getGeneratedKeys();
-                if (keys.next()) 
-                {
-                    int gameId = keys.getInt(1);
-                    ctx.status(201).result("Game created with ID: " + gameId);
-                } 
-                else 
-                {
-                    ctx.status(500).result("Failed to create game");
-                }
+            // Step 1: Insert initial game and set is_cpu_game = true
+            PreparedStatement insertStmt = conn.prepareStatement(
+                "INSERT INTO Game_Playing (game_state, is_cpu_game) VALUES (?, ?)",
+                Statement.RETURN_GENERATED_KEYS
+            );
+            insertStmt.setString(1, initialStateJson);
+            insertStmt.setBoolean(2, true);  // <-- set it to true here
+            insertStmt.executeUpdate();
+
+            // Step 2: Get generated game_id
+            ResultSet keys = insertStmt.getGeneratedKeys();
+            if (keys.next()) {
+                int gameId = keys.getInt(1);
+
+                // Step 3: Update GameState with correct ID
+                newGame.gameId = gameId;
+
+                // Step 4: Serialize again
+                String updatedJson = mapper.writeValueAsString(newGame);
+
+                // Step 5: Update the database record
+                PreparedStatement updateStmt = conn.prepareStatement(
+                    "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?"
+                );
+                updateStmt.setString(1, updatedJson);
+                updateStmt.setInt(2, gameId);
+                updateStmt.executeUpdate();
+
+                ctx.status(201).result("CPU Game created with ID: " + gameId);
+            } else {
+                ctx.status(500).result("Failed to create game");
             }
-        };
-    }
+        }
+    };
+}
+
 
     public static Handler createPlayerGame() 
     {
@@ -519,14 +524,12 @@ public class UnoServer {
             conn.commit();
             ctx.status(201).result("Game started with ID: " + gameId);
     
-        } catch (Exception e) {
+        } 
+        catch (Exception e) 
+        {
             e.printStackTrace();
             ctx.status(500).result("Error starting game: " + e.getMessage());
         }
     };
   }
-
-
-
 }
-
