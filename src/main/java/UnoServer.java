@@ -94,7 +94,7 @@ public class UnoServer {
         //app.post("/startGame", startGame());
 
         //lets a user join the game
-        app.get("/joinGame/{gameId}/{username}", UnoServer::joinGame);
+        app.post("/joinGame/{gameId}/{username}", joinGame());
 
         //grabs the game state
         app.get("/gameState/{gameId}", getGameState());
@@ -324,13 +324,13 @@ public class UnoServer {
         };
     }
 
-    public static void joinGame(Context ctx) 
+    public static Handler joinGame() 
     {
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
-       // return ctx -> {
+        return ctx -> {
             int gameId = Integer.parseInt(ctx.formParam("gameId"));
             String username = ctx.formParam("username");
 
@@ -341,7 +341,7 @@ public class UnoServer {
 
                 //first check gameId is valid created game
                  // Check if gameId exists
-            String selectQuery = "SELECT * FROM Games WHERE gameId = ?";
+            String selectQuery = "SELECT * FROM Games_Playing WHERE Game_Id = ?";
                 try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
                     selectStmt.setInt(1, gameId);
                     ResultSet rs = selectStmt.executeQuery();
@@ -403,7 +403,7 @@ public class UnoServer {
                         }
                     }
                     else
-                     {
+                    {
                         ctx.status(409).result("Player1, Player2, Player3, and Player4 slot already taken.");
                     }
 
@@ -459,7 +459,7 @@ public class UnoServer {
             e.printStackTrace();
             ctx.status(500).result("Internal server error: " + e.getMessage());
         }
-        //};
+      };
     }
 
 
