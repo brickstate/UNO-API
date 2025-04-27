@@ -16,6 +16,8 @@ import Game_Parts.Card;
 import Game_Parts.GameState;
 import Game_Parts.Player;
 import Game_Parts.Deck;
+import Game_Logic.Game;
+import Game_Parts.Hand;
 
 
 //This is the "Game Server" which in the grand scheme of the project should:
@@ -95,7 +97,7 @@ public class UnoServer {
         app.get("/gameState/{gameId}", getGameState());
 
         //plays a card
-        app.post("/playCard", playCard());
+        app.post("/playCard/{gameId}/{username}/{card}", playCard());
         
 
         //Leaving this here Until I need to delete it 
@@ -212,11 +214,11 @@ public class UnoServer {
   public static GameState generateNewGameState() 
   {
     GameState game = new GameState();
-    Deck deck = new Deck();
+    //Deck deck = new Deck();
     game.gameId = 0; // Will be set later if needed
     game.players = new ArrayList<>();
-    game.deck = deck; // You can define this
-    game.discardPile = new ArrayList<>();
+    game.deck = null; // You can define this
+    game.discardPile = null;
     game.currentTurn = 0;
     game.direction = "clockwise";
     game.activeEffect = null;
@@ -274,7 +276,6 @@ public class UnoServer {
         }
     };
 }
-
 
     public static Handler createPlayerGame() 
     {
@@ -399,10 +400,9 @@ public class UnoServer {
 
     /*
      * 
-     curl -X POST http://localhost:7000/playCard \
-     -d "gameId=1" \
-     -d "username=alice" \
-     -d "card={\"color\":\"red\",\"value\":\"5\"}"
+     Invoke-WebRequest -Uri "http://localhost:7000/playCard" `
+      -Method POST `
+      -Body @{gameId=1; username="Player1"; card=2}
      * 
      */
     public static Handler playCard() {
@@ -412,12 +412,14 @@ public class UnoServer {
     
         return ctx -> {
             int gameId = Integer.parseInt(ctx.formParam("gameId"));
-            String cardJson = ctx.formParam("card"); // JSON like {"color":"red","value":"5"}
+            String username = ctx.formParam("username");
+            int cardIndex = Integer.parseInt(ctx.formParam("card")); // card is now a number (index)
     
             try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
                 // Load game state
                 PreparedStatement selectStmt = conn.prepareStatement(
-                    "SELECT game_state FROM Game_Playing WHERE game_id = ?");
+                    "SELECT game_state FROM Game_Playing WHERE game_id = ?"
+                );
                 selectStmt.setInt(1, gameId);
                 ResultSet rs = selectStmt.executeQuery();
     
@@ -428,26 +430,46 @@ public class UnoServer {
     
                 ObjectMapper mapper = new ObjectMapper();
                 GameState game = mapper.readValue(rs.getString("game_state"), GameState.class);
-                Card card = mapper.readValue(cardJson, Card.class);
     
-                // Use updated logic without username
-                //GameLogic.playCard(game, card);
+                // Now find the player
+                Player player = game.players.stream()
+                    .filter(p -> p.username.equals(username))
+                    .findFirst()
+                    .orElse(null);
     
-                // Save updated state
+                if (player == null) {
+                    ctx.status(404).result("Player not found in game.");
+                    return;
+                }
+    
+                if (cardIndex < 0 || cardIndex >= player.hand.size()) {
+                    ctx.status(400).result("Invalid card index.");
+                    return;
+                }
+    
+                //Card playedCard = player.hand.get(cardIndex);
+                Hand playerHand = null;
+    
+                // Apply the game logic
+                //Game.playCard(cardIndex, playerHand);
+    
+                // Save updated game state
                 String updatedJson = mapper.writeValueAsString(game);
                 PreparedStatement updateStmt = conn.prepareStatement(
-                    "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?");
+                    "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?"
+                );
                 updateStmt.setString(1, updatedJson);
                 updateStmt.setInt(2, gameId);
                 updateStmt.executeUpdate();
     
-                ctx.result("Card played.");
+                ctx.result("Card played successfully.");
             } catch (Exception e) {
                 e.printStackTrace();
                 ctx.status(500).result("Failed to play card: " + e.getMessage());
             }
         };
     }
+    
     
 
   public static Handler helpEndpoint() {
