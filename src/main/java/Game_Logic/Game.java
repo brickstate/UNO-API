@@ -35,7 +35,7 @@ public class Game
 
         for(int i = 0; i < num_players; i++)
         {
-                hands[i] = new Hand(deck);
+            hands[i] = new Hand(deck);
         }
         
         if(CPUgame)
@@ -160,6 +160,7 @@ public class Game
                 hands[player_turn].addCard(deck.drawCard());
             }
 
+            // Prints a player's hand
             for(int i = 0; i < hands[player_turn].hand.size(); i++)
             {
                 System.out.printf("Card %d:\n Color: %s\n", i + 1, hands[player_turn].hand.get(i).color);
@@ -171,6 +172,7 @@ public class Game
 
 
 
+            //Process of playing a card with input and card validation
             System.out.println("What card do you want to play? Please select the number printed");
             int num_played = kb.nextInt() - 1;
             Boolean index_valid = num_played >= 0 && num_played < hands[player_turn].hand.size();
@@ -210,6 +212,7 @@ public class Game
                 break;
             }
 
+            // Effects for special cards
             if(card_played.value == Value.SKIP)
             {
                 updateTopCard();
