@@ -250,6 +250,8 @@ public class UnoServer {
             insertStmt.setBoolean(2, true);  // <-- set it to true here
             insertStmt.executeUpdate();
 
+            
+
             // Step 2: Get generated game_id
             ResultSet keys = insertStmt.getGeneratedKeys();
             if (keys.next()) {
@@ -265,6 +267,13 @@ public class UnoServer {
                 PreparedStatement updateStmt = conn.prepareStatement(
                     "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?"
                 );
+
+                PreparedStatement insertStmt2 = conn.prepareStatement(
+                    "INSERT INTO Hands_In_Game (Game_ID) VALUES (?)"
+                );
+                insertStmt2.setInt(1, gameId);
+                insertStmt2.executeUpdate();
+
                 updateStmt.setString(1, updatedJson);
                 updateStmt.setInt(2, gameId);
                 updateStmt.executeUpdate();
@@ -449,9 +458,11 @@ public class UnoServer {
     
                 //Card playedCard = player.hand.get(cardIndex);
                 Hand playerHand = null;
+
+                Card topCard = null;
     
                 // Apply the game logic
-                //Game.playCard(cardIndex, playerHand);
+                Game.playCard(cardIndex, playerHand, topCard);
     
                 // Save updated game state
                 String updatedJson = mapper.writeValueAsString(game);
