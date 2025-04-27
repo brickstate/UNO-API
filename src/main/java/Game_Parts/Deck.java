@@ -2,7 +2,7 @@ package Game_Parts;
  
 import java.util.ArrayList;
 import java.util.Collections;
- 
+
 import Game_Parts.Types.Color;
 import Game_Parts.Types.Value;
  
@@ -19,7 +19,7 @@ public class Deck
  
         // Add number cards
         for (Color color : Color.values()) 
-        {
+        {   
             if (color != Color.WILD) 
             {  // Skip WILD for number cards
                 // Add one Zero card for each color
@@ -50,7 +50,8 @@ public class Deck
         }
  
         shuffle();
-
+        //TODO maybe?  add shuffled deck into db for game id on initilization
+            
         // Draw a card from the pile and put in discard pile
         // This is the starting card
         discard.add(drawCard());

@@ -64,7 +64,8 @@ public class UnoServer {
         // get server running and test enpoints
         // "landing" endpoint
         //Include some " ... for help run ???" for verbose help dialog 
-        app.get("/", ctx -> ctx.result("Uno Game API is running! \nFor detailed info on Uno Game API endpoints: \n--->  curl http://localhost:7000/help"));
+        app.get("/", ctx -> ctx.result("Uno Game API is running! \nFor detailed info on Uno Game API endpoints: \n--->" +
+        "  (Invoke-WebRequest -Uri \"http://localhost:7000/listUsers\").Content"));
 
         //simple hello endpoint (works)
         app.get("/hello", ctx -> ctx.result("Hello, world!"));
@@ -83,6 +84,9 @@ public class UnoServer {
 
         //creates a game with players
         app.post("/createPlayerGame", createPlayerGame());
+
+        //NEED TO COMPLETE (game logic connections to endpoints)
+        app.post("/startGame", startGame());
 
         //lets a user join the game
         app.post("/joinGame", joinGame());
@@ -470,7 +474,57 @@ public class UnoServer {
     };
   }
 
-
+  //NEED TO COMB THROUGH THIS and try and get it working/ test the endpoint
+  public static Handler startGame() {
+    return ctx -> {
+        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        String user = "testuser";
+        String password = "123";
+    
+        String userIdsParam = ctx.formParam("userIds"); // e.g., "1,2,3"
+        if (userIdsParam == null || userIdsParam.isEmpty()) {
+            ctx.status(400).result("Missing 'userIds' parameter.");
+            return;
+        }
+    
+        String[] userIds = userIdsParam.split(",");
+    
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+            conn.setAutoCommit(false);
+    
+            // 1. Create new game
+            PreparedStatement gameStmt = conn.prepareStatement(
+                "INSERT INTO games (status, turn) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
+            gameStmt.setString(1, "IN_PROGRESS");
+            gameStmt.setInt(2, Integer.parseInt(userIds[0])); // First user's ID as starting turn
+            gameStmt.executeUpdate();
+    
+            ResultSet generatedKeys = gameStmt.getGeneratedKeys();
+            if (!generatedKeys.next()) {
+                conn.rollback();
+                ctx.status(500).result("Failed to create game.");
+                return;
+            }
+    
+            int gameId = generatedKeys.getInt(1);
+    
+            // 2. Shuffle and insert full deck
+            // (You would load from cards table and shuffle in Java, then insert into deck table)
+    
+            // 3. Deal cards to each user
+            // Loop through userIds, draw 7 cards for each from deck, insert into hands table
+    
+            // 4. Draw top card to discard_pile
+    
+            conn.commit();
+            ctx.status(201).result("Game started with ID: " + gameId);
+    
+        } catch (Exception e) {
+            e.printStackTrace();
+            ctx.status(500).result("Error starting game: " + e.getMessage());
+        }
+    };
+  }
 
 
 
