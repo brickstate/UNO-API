@@ -70,7 +70,7 @@ public class UnoServer {
         //simple hello endpoint (works)
         app.get("/hello", ctx -> ctx.result("Hello, world!"));
         
-        //add more endpoints to the helpEndpoint() function as we add more game mechanics to the API
+        //add more endpoints to the helpEndpoint() function as we add more game mechanics to the API (add new commands)
         app.get("/help", helpEndpoint());
 
         //this will get all of the users from the "users" table (works)
@@ -85,8 +85,8 @@ public class UnoServer {
         //creates a game with players
         app.post("/createPlayerGame", createPlayerGame());
 
-        //NEED TO COMPLETE (game logic connections to endpoints)
-        app.post("/startGame", startGame());
+        //NEED TO COMPLETE (game logic connections to endpoints) prob nuke
+        //app.post("/startGame", startGame());
 
         //lets a user join the game
         app.post("/joinGame", joinGame());
