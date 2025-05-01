@@ -292,7 +292,9 @@ public class UnoServer {
 
 
                 ctx.status(201).result("CPU Game created with ID: " + gameId);
-/* 
+
+
+                ////////////////
                 //TODO deck initialization in DB HERE
                 Deck deckz = new Deck();
                 ArrayList<Card> cards = deckz.getDeck(); 
@@ -326,20 +328,6 @@ public class UnoServer {
                 }
             }
 
-
-                
-                //ArrayList<Card> cards = deckz.getDeck();
-                //for (Card c : cards)
-                //{
-                    // Do something with each card
-                    //System.out.println(c.getColor() + " - " + c.getValue());
-                //}
-
-
-                //TODO CPU 7 card hard initialization 
-                // ?? 
-
-*/
             } else {
                 ctx.status(500).result("Failed to create game");
             }
@@ -438,30 +426,8 @@ public class UnoServer {
                 String topCardjson = deckz.convertDiscardToNumberedJson(topCard);
 
                 
-                // Handles deck init in DB
-            String sql = "UPDATE Hands_In_Game SET Deck_Cards = ? WHERE Game_ID = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, deckjson);
-                stmt.setInt(2, gameId);
-                int updated = stmt.executeUpdate();
-                if (updated > 0) {
-                    ctx.status(200).result("Deck successfully shuffled for Game_ID " + gameId);
-                } else {
-                    ctx.status(404).result("No matching Game_ID " + gameId + " found.");
-                }
-            }
-                // Handles TOP (only 1 card on init) Discard pile  
-            sql = "UPDATE Hands_In_Game SET Top_Card = ? WHERE Game_ID = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, topCardjson);
-                stmt.setInt(2, gameId);
-                int updated = stmt.executeUpdate();
-                if (updated > 0) {
-                    ctx.status(200).result("Top card successfully stored for Game_ID " + gameId);
-                } else {
-                    ctx.status(404).result("No matching Game_ID " + gameId + " found.");
-                }
-            }
+                //TODO CPU 7 card hard initialization 
+                // ?? 
 
                 //TODO CPU 7 card hard initialization 
                 // ?? 
