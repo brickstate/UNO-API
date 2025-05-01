@@ -19,6 +19,10 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.Handler;
 
+import Game_Parts.Deck;
+import Game_Logic.Game;
+import Game_Parts.Hand;
+
 
 //This is the "Game Server" which in the grand scheme of the project should:
 //  1. listen to http endpoint conenctions for user interaction
@@ -91,7 +95,7 @@ public class UnoServer {
         //app.post("/startGame", startGame());
 
         //lets a user join the game
-        app.get("/joinGame/{gameId}/{username}", UnoServer::joinGame);
+        app.post("/joinGame/{gameId}/{username}", joinGame());
 
         //grabs the game state
         app.get("/gameState/{gameId}", getGameState());
@@ -250,6 +254,8 @@ public class UnoServer {
             insertStmt.setBoolean(2, true);  // <-- set it to true here
             insertStmt.executeUpdate();
 
+            
+
             // Step 2: Get generated game_id
             ResultSet keys = insertStmt.getGeneratedKeys();
             if (keys.next()) {
@@ -265,9 +271,25 @@ public class UnoServer {
                 PreparedStatement updateStmt = conn.prepareStatement(
                     "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?"
                 );
+
+                PreparedStatement insertStmt2 = conn.prepareStatement(
+                    "INSERT INTO Hands_In_Game (Game_ID) VALUES (?)"
+                );
+                insertStmt2.setInt(1, gameId);
+                insertStmt2.executeUpdate();
+
                 updateStmt.setString(1, updatedJson);
                 updateStmt.setInt(2, gameId);
                 updateStmt.executeUpdate();
+
+                //auto setup of COMPUTER player2 in Hands
+                PreparedStatement updateStmt2 = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Player_2 = ? WHERE Game_Id = ?"
+                );
+                updateStmt2.setString(1, "COMPUTER");
+                updateStmt2.setInt(2, gameId);
+                updateStmt2.executeUpdate();
+
 
                 ctx.status(201).result("CPU Game created with ID: " + gameId);
 /* 
@@ -369,15 +391,16 @@ public class UnoServer {
         };
     }
 
-    public static void joinGame(Context ctx) 
+    public static Handler joinGame() 
     {
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
-       // return ctx -> {
-            int gameId = Integer.parseInt(ctx.formParam("gameId"));
-            String username = ctx.formParam("username");
+        return ctx -> {
+            int gameId = Integer.parseInt(ctx.pathParam("gameId"));
+            String username = ctx.pathParam("username");
+
 
             // Load game state JSON
             try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
@@ -396,10 +419,10 @@ public class UnoServer {
                         return;
                     }
     
-                    String player1 = rs.getString("Player1");
-                    String player2 = rs.getString("Player2");
-                    String player3 = rs.getString("Player3");
-                    String player4 = rs.getString("Player4");
+                    String player1 = rs.getString("Player_1");
+                    String player2 = rs.getString("Player_2");
+                    String player3 = rs.getString("Player_3");
+                    String player4 = rs.getString("Player_4");
     
                     // If Player1 is null, assign username
                     // checks other names if p1 is taken
@@ -456,7 +479,8 @@ public class UnoServer {
                     } 
                     else if ( player1 != null && player2 == null)
                     {
-                        String updateQuery = "UPDATE Games SET Player2 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_2 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -467,7 +491,8 @@ public class UnoServer {
                     }
                     else if ( player1 != null && player2 != null && player3 == null)
                     {
-                        String updateQuery = "UPDATE Games SET Player3 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_3 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -478,7 +503,8 @@ public class UnoServer {
                     }
                     else if ( player1 != null && player2 != null && player3 != null && player4 == null)
                     {
-                        String updateQuery = "UPDATE Games SET Player4 = ? WHERE gameId = ?";
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_4 = ? WHERE Game_Id = ?";
+
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -488,7 +514,7 @@ public class UnoServer {
                         }
                     }
                     else
-                     {
+                    {
                         ctx.status(409).result("Player1, Player2, Player3, and Player4 slot already taken.");
                     }
 
@@ -544,7 +570,7 @@ public class UnoServer {
             e.printStackTrace();
             ctx.status(500).result("Internal server error: " + e.getMessage());
         }
-        //};
+      };
     }
 
 
@@ -623,9 +649,11 @@ public class UnoServer {
     
                 //Card playedCard = player.hand.get(cardIndex);
                 Hand playerHand = null;
+
+                Card topCard = null;
     
                 // Apply the game logic
-                //Game.playCard(cardIndex, playerHand);
+                Game.playCard(cardIndex, playerHand, topCard);
     
                 // Save updated game state
                 String updatedJson = mapper.writeValueAsString(game);
