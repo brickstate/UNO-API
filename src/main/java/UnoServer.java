@@ -420,14 +420,14 @@ public class UnoServer {
         String password = "123";
     
         return ctx -> {
-            int gameId = Integer.parseInt(ctx.formParam("gameId"));
-            String username = ctx.formParam("username");
-            int cardIndex = Integer.parseInt(ctx.formParam("card")); // card is now a number (index)
+            int gameId = Integer.parseInt(ctx.pathParam("gameId"));
+            String username = ctx.pathParam("username");
+            int cardIndex = Integer.parseInt(ctx.pathParam("card")); // card is now a number (index)
     
             try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
                 // Load game state
                 PreparedStatement selectStmt = conn.prepareStatement(
-                    "SELECT game_state FROM Game_Playing WHERE game_id = ?"
+                    "SELECT game_state FROM Game_Playing WHERE game_Id = ?"
                 );
                 selectStmt.setInt(1, gameId);
                 ResultSet rs = selectStmt.executeQuery();
@@ -446,28 +446,103 @@ public class UnoServer {
                     .findFirst()
                     .orElse(null);
     
-                if (player == null) {
+                if (player == null) 
+                {
                     ctx.status(404).result("Player not found in game.");
                     return;
                 }
+            
+                Hand playerHand = null;
     
-                if (cardIndex < 0 || cardIndex >= player.hand.size()) {
+                // Apply the game logic
+                
+                // First, find the correct column (P1_Hand, P2_Hand...) for this username
+                PreparedStatement findSlotStmt = conn.prepareStatement(
+                "SELECT Player_1, Player_2, Player_3, Player_4 FROM Hands_In_Game WHERE Game_ID = ?"
+                );
+                findSlotStmt.setInt(1, gameId);
+                ResultSet slotRs = findSlotStmt.executeQuery();
+
+                if (!slotRs.next()) 
+                {
+                    ctx.status(404).result("Game not found in Hands_In_Game.");
+                    return;
+                }
+
+                // Get player hand
+                String handColumn = null;
+
+                for (int i = 1; i <= 4; i++) 
+                {
+                    String playerName = slotRs.getString("Player_" + i);
+                    if (username.equals(playerName)) 
+                    {
+                        handColumn = "P" + i + "_Hand";
+                        String handJson = slotRs.getString(handColumn);
+                        
+                        //ObjectMapper mapper = new ObjectMapper();
+                        playerHand = mapper.readValue(handJson, Hand.class);
+                        break;
+                    }
+                }
+
+                // Check index
+
+                if (cardIndex < 0 || cardIndex >= playerHand.hand.size()) 
+                {
                     ctx.status(400).result("Invalid card index.");
                     return;
                 }
-    
-                //Card playedCard = player.hand.get(cardIndex);
-                Hand playerHand = null;
 
-                Card topCard = null;
-    
-                // Apply the game logic
-                Game.playCard(cardIndex, playerHand, topCard);
+                // Make sure player is found
+
+                if (handColumn == null) 
+                {
+                    ctx.status(404).result("Player not found in Hands_In_Game.");
+                    return;
+                }
+
+                String topCardJson = slotRs.getString("TopCard");
+                Card topCard = mapper.readValue(topCardJson, Card.class);
+
+                // Validate card
+
+                Card playedCard = playerHand.hand.get(cardIndex);
+                playedCard = Game.playCard(playedCard, topCard);
+
+                if (playedCard == null)
+                {
+                    ctx.status(404).result("Card is invalid.");
+                    return;
+                }
+
+                // Change top card
+
+                topCardJson = mapper.writeValueAsString(playedCard);
+                PreparedStatement updateTopCardStmt = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET TopCard = ? WHERE Game_ID = ?"
+                );
+                updateTopCardStmt.setString(1, topCardJson);
+                updateTopCardStmt.setInt(2, gameId);
+                updateTopCardStmt.executeUpdate();
+
+                // Remove from hand
+
+                playerHand.hand.remove(cardIndex);
+                
+                // Update the hand in the corresponding column
+                String updatedHandJson = mapper.writeValueAsString(playerHand);
+                String updateHandQuery = "UPDATE Hands_In_Game SET " + handColumn + " = ? WHERE Game_ID = ?";
+                PreparedStatement updateHandStmt = conn.prepareStatement(updateHandQuery);
+                updateHandStmt.setString(1, updatedHandJson);
+                updateHandStmt.setInt(2, gameId);
+                updateHandStmt.executeUpdate();
+
     
                 // Save updated game state
                 String updatedJson = mapper.writeValueAsString(game);
                 PreparedStatement updateStmt = conn.prepareStatement(
-                    "UPDATE Game_Playing SET game_state = ? WHERE game_id = ?"
+                    "UPDATE Game_Playing SET game_state = ? WHERE Game_ID = ?"
                 );
                 updateStmt.setString(1, updatedJson);
                 updateStmt.setInt(2, gameId);
