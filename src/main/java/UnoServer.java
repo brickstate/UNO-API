@@ -7,20 +7,23 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import Game_Logic.Game;
 import Game_Parts.Card;
 import Game_Parts.Deck;
 import Game_Parts.GameState;
+import Game_Parts.Hand;
 import Game_Parts.Player;
 import io.javalin.Javalin;
-import io.javalin.http.Context;
 import io.javalin.http.Handler;
-
-import Game_Parts.Deck;
-import Game_Logic.Game;
-import Game_Parts.Hand;
 
 
 //This is the "Game Server" which in the grand scheme of the project should:
@@ -291,6 +294,42 @@ public class UnoServer {
 
 
                 ctx.status(201).result("CPU Game created with ID: " + gameId);
+
+
+                ////////////////
+                //TODO deck initialization in DB HERE
+                Deck deckz = new Deck();
+                ArrayList<Card> cards = deckz.getDeck(); 
+                String deckjson = deckz.convertDeckToNumberedJson(cards);
+                Card topCard = deckz.peekDiscard();
+                String topCardjson = deckz.convertDiscardToNumberedJson(topCard);
+
+                
+                // Handles deck init in DB
+            String sql = "UPDATE Hands_In_Game SET Deck_Cards = ? WHERE Game_ID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, deckjson);
+                stmt.setInt(2, gameId);
+                int updated = stmt.executeUpdate();
+                if (updated > 0) {
+                    ctx.status(200).result("Deck successfully shuffled for Game_ID " + gameId);
+                } else {
+                    ctx.status(404).result("No matching Game_ID " + gameId + " found.");
+                }
+            }
+                // Handles TOP (only 1 card on init) Discard pile  
+            sql = "UPDATE Hands_In_Game SET Top_Card = ? WHERE Game_ID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, topCardjson);
+                stmt.setInt(2, gameId);
+                int updated = stmt.executeUpdate();
+                if (updated > 0) {
+                    ctx.status(200).result("Top card successfully stored for Game_ID " + gameId);
+                } else {
+                    ctx.status(404).result("No matching Game_ID " + gameId + " found.");
+                }
+            }
+
             } else {
                 ctx.status(500).result("Failed to create game");
             }
@@ -360,8 +399,7 @@ public class UnoServer {
 
                 //first check gameId is valid created game
                  // Check if gameId exists
-                 String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_Id = ?";
-
+            String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_ID = ?";
                 try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
                     selectStmt.setInt(1, gameId);
                     ResultSet rs = selectStmt.executeQuery();
@@ -376,12 +414,81 @@ public class UnoServer {
                     String player3 = rs.getString("Player_3");
                     String player4 = rs.getString("Player_4");
     
+        //////// start of testing ////////////////////////////////////////////////
                     // If Player1 is null, assign username
                     // checks other names if p1 is taken
                     if (player1 == null) 
                     {
-                        String updateQuery = "UPDATE Hands_In_Game SET Player_1 = ? WHERE Game_Id = ?";
+                        // ASSUME there is no players in the game rn.. 
+                        // init Deck for the whole game // init Top Card (Discard Pile) 
+            
+                //TODO 7 card hand initialization 
+                // 
+                ObjectMapper mapper = new ObjectMapper();
 
+        String deckQuery = "SELECT Deck_Cards FROM Hands_In_Game WHERE Game_ID = ?";
+        PreparedStatement deckstatment = conn.prepareStatement(deckQuery);
+        deckstatment.setInt(1, gameId);
+
+        String resultDeckjson = "";
+
+        try (ResultSet rs2 = deckstatment.executeQuery()) {
+            if (rs2.next()) {
+                // Assuming Deck_Cards is stored as JSON or VARCHAR in MySQL
+                resultDeckjson = rs.getString("Deck_Cards");
+            } else {
+                resultDeckjson = "ERROR idk why.."; // or throw exception if game ID not found
+            }
+        }
+
+        // Parse the input JSON into a LinkedHashMap to preserve order
+        Map<String, String> drawdeck = mapper.readValue(resultDeckjson, LinkedHashMap.class);
+
+        // Sort keys numerically (since JSON keys are strings)
+        List<Integer> sortedKeys = drawdeck.keySet().stream()
+            .map(Integer::parseInt)
+            .sorted()
+            .collect(Collectors.toList());
+
+        // Extract first 7 cards
+        ObjectNode drawnJSON = mapper.createObjectNode();
+        ObjectNode updatedJSON = mapper.createObjectNode();
+
+        for (int i = 0; i < sortedKeys.size(); i++) {
+            String key = String.valueOf(sortedKeys.get(i));
+            if (i < 7) {
+                drawnJSON.put(key, drawdeck.get(key));
+            } else {
+                updatedJSON.put(key, drawdeck.get(key));
+            }
+        }
+
+        Map<String, String> result = new HashMap<>();
+        result.put("drawn", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(drawnJSON));
+        result.put("updated", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(updatedJSON));
+        //how to access drawn and updated cards 
+        //result.get("drawn");   //result.get("updated");
+        //PUSHING drawn cards (P1_Hand) and UpdatedDeck to DB !!
+        String updateDeck = "UPDATE Hands_In_Game SET Deck_Cards = ?, P1_Hand = ? WHERE Game_ID = ?";
+        PreparedStatement pushDeck = conn.prepareStatement(updateDeck);
+        pushDeck.setString(1, result.get("updated"));
+        pushDeck.setString(2, result.get("drawn"));
+        pushDeck.setInt(3, gameId);
+
+        int rowsUpdated = pushDeck.executeUpdate();
+                if (rowsUpdated > 0) {
+                    ctx.status(200).result(username +" successfully drew 7 Cards :  Game " + gameId);
+                } else {
+                    ctx.status(404).result("Game ID not found.");
+                }
+
+                //TODO CPU 7 card hand initialization 
+                // ?? 
+
+
+                //// end of testing ////////////////////////////////////////////////////////////////
+                        //Below is the logic for getting P1 Username into DB
+                        String updateQuery = "UPDATE Hands_In_Game SET Player_1 = ? WHERE Game_ID = ?";
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) 
                         {
                             updateStmt.setString(1, username);
@@ -431,7 +538,7 @@ public class UnoServer {
                         ctx.status(409).result("Player1, Player2, Player3, and Player4 slot already taken.");
                     }
 
-
+                    // TODO initialize a 7 card hand for new joined user
 
 
 

@@ -9,6 +9,7 @@ Game_Logic\Game.class
 Game_Parts\Deck.class
 Game_Parts\Types\Value.class
 User.class
+DeckTest.class
 Game_Parts\Card.class
 main\java\UnoServer.class
 MySQLTest.class
