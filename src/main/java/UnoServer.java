@@ -882,6 +882,7 @@ public static Handler createCPUGame() {
   }
 
   public static Handler checkOldGames() {
+    return ctx -> {
     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
@@ -925,6 +926,7 @@ public static Handler createCPUGame() {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    };
     }
 
 }
