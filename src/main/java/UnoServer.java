@@ -549,6 +549,8 @@ public class UnoServer {
                 updateStmt.executeUpdate();
     
                 ctx.result("Card played successfully.");
+
+                //TODO: check if hand is now empty
             } catch (Exception e) {
                 e.printStackTrace();
                 ctx.status(500).result("Failed to play card: " + e.getMessage());
