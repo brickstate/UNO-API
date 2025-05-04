@@ -142,4 +142,48 @@ public class Deck
             System.out.println("Color: " + c.color + "\t" + "Value: " + c.value);
         }
     }
+
+    public ArrayList<Card> getDeck()
+    {
+        return deck;
+    }
+
+    public String convertDeckToNumberedJson(ArrayList<Card> deck) {
+        StringBuilder jsonBuilder = new StringBuilder();
+        jsonBuilder.append("{\n");
+    
+        for (int i = 0; i < deck.size(); i++) {
+            Card c = deck.get(i);
+            String entry = String.format("  \"%d\" : \"%s %s\"", i + 1, c.color, c.value);
+            jsonBuilder.append(entry);
+    
+            if (i < deck.size() - 1) {
+                jsonBuilder.append(",\n");
+            } else {
+                jsonBuilder.append("\n");
+            }
+        }
+    
+        jsonBuilder.append("}");
+        return jsonBuilder.toString();
+    }
+
+    //just gets the top one discard in json format { 1 : COLOR VALUE }
+    public String convertDiscardToNumberedJson(Card Graveyard) {
+        StringBuilder jsonBuilder = new StringBuilder();
+        jsonBuilder.append("{\n");
+    
+        for (int i = 0; i < discard.size(); i++) {
+    
+            String entry = String.format("  \"%d\" : \"%s %s\"", i + 1, Graveyard.color, Graveyard.value);
+            jsonBuilder.append(entry);
+            //add a check here for reuse -- check to see if you only need one element and folowing ' , ' after each entry
+                jsonBuilder.append("\n");
+        }
+    
+        jsonBuilder.append("}");
+        return jsonBuilder.toString();
+    }
+
+    
  }
