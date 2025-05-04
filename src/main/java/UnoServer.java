@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -234,8 +235,12 @@ public class UnoServer {
     return game;
   }
 
-
-  public static Handler createCPUGame() {
+/*
+*   to get fresh game ID
+     Invoke-WebRequest -Uri "http://localhost:7000/playCard" 
+* 
+*/
+public static Handler createCPUGame() {
     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
@@ -297,7 +302,7 @@ public class UnoServer {
 
 
                 ////////////////
-                //TODO deck initialization in DB HERE
+                //? ! deck initialization in DB HERE
                 Deck deckz = new Deck();
                 ArrayList<Card> cards = deckz.getDeck(); 
                 String deckjson = deckz.convertDeckToNumberedJson(cards);
@@ -382,7 +387,8 @@ public class UnoServer {
     }
 
     public static Handler joinGame() 
-    {
+    {//TODO bug : check whats going on with json inside of decktest
+    
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
@@ -422,7 +428,7 @@ public class UnoServer {
                         // ASSUME there is no players in the game rn.. 
                         // init Deck for the whole game // init Top Card (Discard Pile) 
             
-                //TODO 7 card hand initialization 
+                //TODO 7 card hand initialization  FIX BUG why is json acting weird?
                 // 
                 ObjectMapper mapper = new ObjectMapper();
 
@@ -435,7 +441,9 @@ public class UnoServer {
         try (ResultSet rs2 = deckstatment.executeQuery()) {
             if (rs2.next()) {
                 // Assuming Deck_Cards is stored as JSON or VARCHAR in MySQL
-                resultDeckjson = rs.getString("Deck_Cards");
+                //BUG HERE ??????????????
+                // we use rs2 HERE and not rs !!!!
+                resultDeckjson = rs2.getString("Deck_Cards");
             } else {
                 resultDeckjson = "ERROR idk why.."; // or throw exception if game ID not found
             }
@@ -454,6 +462,9 @@ public class UnoServer {
         ObjectNode drawnJSON = mapper.createObjectNode();
         ObjectNode updatedJSON = mapper.createObjectNode();
 
+        ObjectNode reindexedUpdatedJSON = mapper.createObjectNode();
+        int newIndex = 1;
+
         for (int i = 0; i < sortedKeys.size(); i++) {
             String key = String.valueOf(sortedKeys.get(i));
             if (i < 7) {
@@ -463,9 +474,16 @@ public class UnoServer {
             }
         }
 
+        //important for updating draw deck keys
+        for (Iterator<String> it = updatedJSON.fieldNames(); it.hasNext(); ) {
+            String oldKey = it.next();
+            String value = updatedJSON.get(oldKey).asText();
+            reindexedUpdatedJSON.put(String.valueOf(newIndex++), value);
+        }
+
         Map<String, String> result = new HashMap<>();
         result.put("drawn", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(drawnJSON));
-        result.put("updated", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(updatedJSON));
+        result.put("updated", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(reindexedUpdatedJSON));
         //how to access drawn and updated cards 
         //result.get("drawn");   //result.get("updated");
         //PUSHING drawn cards (P1_Hand) and UpdatedDeck to DB !!
@@ -482,7 +500,7 @@ public class UnoServer {
                     ctx.status(404).result("Game ID not found.");
                 }
 
-                //TODO CPU 7 card hand initialization 
+                //TODO CPU 7 card hand initialization need to do
                 // ?? 
 
 
@@ -538,7 +556,7 @@ public class UnoServer {
                         ctx.status(409).result("Player1, Player2, Player3, and Player4 slot already taken.");
                     }
 
-                    // TODO initialize a 7 card hand for new joined user
+                    // TODO initialize a 7 card hand for new joined user IF we actually implement 1v1v1v1
 
 
 
@@ -718,6 +736,8 @@ public class UnoServer {
 
                 .append("[GET]  /help           --> Displays this help information\n")
                 .append("    Command: Invoke-WebRequest http://localhost:7000/help\n");
+
+                //TODO more endpoints [/joinGame/:id/:username | /createCPUGame | ]
 
         ctx.result(helpText.toString());
     };
