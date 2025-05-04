@@ -474,7 +474,25 @@ public class UnoServer {
                 .append("    Command: Invoke-WebRequest http://localhost:7000/listUsers\n\n")
 
                 .append("[POST] /registerUser   --> Registers a new user with username and password\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body \"username=[ENTERUSERNAME]\" -ContentType \"application/x-www-form-urlencoded\"\n\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body @{username='yourname';password='yourpass'} -ContentType \"application/x-www-form-urlencoded\"\n\n")
+
+                .append("[POST] /createCPUGame  --> Creates a new game against CPU\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createCPUGame -Method POST\n\n")
+
+                .append("[POST] /createPlayerGame --> Creates a new multiplayer game\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createPlayerGame -Method POST\n\n")
+
+                .append("[POST] /joinGame       --> Join an existing game\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/joinGame -Method POST -Body @{gameId='1';username='yourname'} -ContentType \"application/x-www-form-urlencoded\"\n\n")
+
+                .append("[GET]  /gameState/{gameId} --> Get current state of a game\n")
+                .append("    Command: Invoke-WebRequest http://localhost:7000/gameState/1\n\n")
+
+                .append("[POST] /playCard       --> Play a card in a game\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/playCard -Method POST -Body @{gameId='1';card='{\"color\":\"red\",\"value\":\"5\"}'} -ContentType \"application/x-www-form-urlencoded\"\n\n")
+
+                .append("[DELETE] /checkOldGames --> Move old games to completed_games table\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/checkOldGames -Method DELETE\n\n")
 
                 .append("[GET]  /help           --> Displays this help information\n")
                 .append("    Command: Invoke-WebRequest http://localhost:7000/help\n");
