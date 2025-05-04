@@ -585,21 +585,18 @@ public class Game
 
     //Takes an index for the number played and the playerHand. Makes sure it can be played 
     //and returns the card if it can be. Otherwise return null.
-    public static Card playCard(int num_played, Hand playerHand, Card passedTopCard)
+    public static Card playCard(Card playedCard, Card passedTopCard)
     {
-        Card card_played = playerHand.hand.get(num_played);
         
         // If the card cannot be played, return nothing
-        if(!is_Valid(card_played, passedTopCard))
+        if(!is_Valid(playedCard, passedTopCard))
         {
             return null;
         }
-
-        card_played = playerHand.hand.get(num_played);
             
-        System.out.printf("Card played color: %s\n", card_played.color);
-        System.out.printf("Card played value: %s\n", card_played.value);
+        System.out.printf("Card played color: %s\n", playedCard.color);
+        System.out.printf("Card played value: %s\n", playedCard.value);
            
-        return card_played;
+        return playedCard;
     }
 }
