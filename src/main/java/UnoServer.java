@@ -248,6 +248,7 @@ public class UnoServer {
 * 
 */
 public static Handler createCPUGame() {
+    // TODO  extend draw 7 card init functionality to CPU hand 
     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
@@ -342,6 +343,66 @@ public static Handler createCPUGame() {
                 }
             }
 
+
+            /////////////////////// START TESTING [draw 7 cards init CPU Player2] //////////////////////////////
+            // TODO cpu 7 card hand init HERE
+            //ObjectMapper mapper = new ObjectMapper();         //'mapper' already a local function
+
+            //grab the shuffled json draw pile
+            Map<String, String> drawdeck = mapper.readValue(deckjson, LinkedHashMap.class);
+
+            // Sort keys numerically (since JSON keys are strings)
+        List<Integer> sortedKeys = drawdeck.keySet().stream()
+            .map(Integer::parseInt)
+            .sorted()
+            .collect(Collectors.toList());
+
+        // Extract first 7 cards
+        ObjectNode drawnJSON = mapper.createObjectNode();
+        ObjectNode updatedJSON = mapper.createObjectNode();
+
+        ObjectNode reindexedUpdatedJSON = mapper.createObjectNode();
+        int newIndex = 1;
+
+        for (int i = 0; i < sortedKeys.size(); i++) {
+            String key = String.valueOf(sortedKeys.get(i));
+            if (i < 7) {
+                drawnJSON.put(key, drawdeck.get(key));
+            } else {
+                updatedJSON.put(key, drawdeck.get(key));
+            }
+        }
+
+        //important for updating draw deck keys
+        for (Iterator<String> it = updatedJSON.fieldNames(); it.hasNext(); ) {
+            String oldKey = it.next();
+            String value = updatedJSON.get(oldKey).asText();
+            reindexedUpdatedJSON.put(String.valueOf(newIndex++), value);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        result.put("drawn", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(drawnJSON));
+        result.put("updated", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(reindexedUpdatedJSON));
+        //how to access drawn and updated cards 
+        //result.get("drawn");   //result.get("updated");
+        //PUSHING drawn cards (P1_Hand) and UpdatedDeck to DB !!
+        String updateDeck = "UPDATE Hands_In_Game SET Deck_Cards = ?, P2_Hand = ? WHERE Game_ID = ?";
+        PreparedStatement pushDeck = conn.prepareStatement(updateDeck);
+        pushDeck.setString(1, result.get("updated"));
+        pushDeck.setString(2, result.get("drawn"));
+        pushDeck.setInt(3, gameId);
+
+        int rowsUpdated = pushDeck.executeUpdate();
+                if (rowsUpdated > 0) {
+                    ctx.status(200).result("COMPUTER (Player-2) successfully drew 7 Cards :  Game " + gameId);
+                } else {
+                    ctx.status(404).result("Game ID not found.");
+                }
+            //prepared statement UPDATE (COMPUTER) P2_Hand 
+
+
+            /////////////////////// END  TESTING //////////////////////////////
+
             } else {
                 ctx.status(500).result("Failed to create game");
             }
@@ -394,7 +455,7 @@ public static Handler createCPUGame() {
     }
 
     public static Handler joinGame() 
-    {//TODO bug : check whats going on with json inside of decktest
+    {//TODO MAKE SURE IT WORKS 
     
         String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
@@ -427,7 +488,7 @@ public static Handler createCPUGame() {
                     String player3 = rs.getString("Player_3");
                     String player4 = rs.getString("Player_4");
     
-        //////// start of testing ////////////////////////////////////////////////
+        // TODO////// start of testing //////////////////////////////////////////////// TODO 
                     // If Player1 is null, assign username
                     // checks other names if p1 is taken
                     if (player1 == null) 
@@ -435,7 +496,7 @@ public static Handler createCPUGame() {
                         // ASSUME there is no players in the game rn.. 
                         // init Deck for the whole game // init Top Card (Discard Pile) 
             
-                //TODO 7 card hand initialization  FIX BUG why is json acting weird?
+                //[fixed] FIX BUG why is json acting weird?
                 // 
                 ObjectMapper mapper = new ObjectMapper();
 
@@ -506,9 +567,7 @@ public static Handler createCPUGame() {
                 } else {
                     ctx.status(404).result("Game ID not found.");
                 }
-
-                //TODO CPU 7 card hand initialization need to do
-                // ?? 
+ 
 
 
                 //// end of testing ////////////////////////////////////////////////////////////////
@@ -563,7 +622,7 @@ public static Handler createCPUGame() {
                         ctx.status(409).result("Player1, Player2, Player3, and Player4 slot already taken.");
                     }
 
-                    // TODO initialize a 7 card hand for new joined user IF we actually implement 1v1v1v1
+                    //  initialize a 7 card hand for new joined user IF we actually implement 1v1v1v1
 
 
 
