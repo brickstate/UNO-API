@@ -111,7 +111,10 @@ public class UnoServer {
         // Moves old games into the Completed_Games table
         app.delete("/checkOldGames", checkOldGames());
         
+        //shows information about [TopCard] [# of cards in p2 hand] [exact cards in p1 hand]
         app.get("/showTable/{gameId}/{username}", showTable());
+
+        app.post("/drawCards", drawCards());
 
         //Leaving this here Until I need to delete it 
         // Endpoint for testing
@@ -914,7 +917,7 @@ public static Handler createCPUGame() {
                 .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createPlayerGame -Method POST\n\n")
 
                 .append("[POST] /joinGame       --> Join an existing game\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/joinGame -Method POST -Body @{gameId='1';username='yourname'} -ContentType \"application/x-www-form-urlencoded\"\n\n")
+                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/joinGame/{gameId}/{username} -Method POST -ContentType \"application/x-www-form-urlencoded\"\n\n")
 
                 .append("[GET]  /gameState/{gameId} --> Get current state of a game\n")
                 .append("    Command: Invoke-WebRequest http://localhost:7000/gameState/1\n\n")
@@ -982,7 +985,6 @@ public static Handler createCPUGame() {
     };
     }
 
-
     public static Handler showTable()
     {   // ASUMES ONLY TWO PLAYERS IN GAME ... HUMAN V. CPU
         
@@ -991,8 +993,6 @@ public static Handler createCPUGame() {
         //    + show json for top card
         //    + list cards json for hand where -->  PX_Hand == [username]
         
-        
-
         return ctx -> {
             String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
             String user = "testuser";
@@ -1042,4 +1042,121 @@ public static Handler createCPUGame() {
         };
     }
 
+    public static Handler drawCards()
+    {
+        //TODO draw cards 
+        //   + turn p1_Hand -> Hand p1Hand = new Hand()
+        //   + call isHandValid() --> return T || F;
+        //   + WHILE ... !valid() --> (draw card --+> p1_Hand) || valid() --> (do nothing ,, no need to draw)  
+        return ctx -> {
+            String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+            String user = "testuser";
+            String password = "123";
+
+            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+            {
+
+            int gameId = Integer.parseInt(ctx.pathParam("gameId"));
+            String username = ctx.pathParam("username");
+
+            ObjectMapper mapper = new ObjectMapper();
+
+            //get p1_Hand json from db
+            String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_ID = ?";
+            try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
+                selectStmt.setInt(1, gameId);
+                ResultSet rs = selectStmt.executeQuery();
+
+                if (!rs.next()) {
+                    ctx.status(404).result("Game not found.");
+                    return;
+                }
+
+                String p1HandJSON = rs.getString("P1_Hand");
+                String drawdeckJSON = rs.getString("Deck_Cards");
+                String topCardJSON = rs.getString("Top_Card");
+
+
+            // Put p1HandJSON into playerHand
+            Hand playerHand = null;
+            
+            Map<String, String> rawMap = mapper.readValue(p1HandJSON, new TypeReference<Map<String, String>>() {});
+            
+            ArrayList<Card> cardList = new ArrayList<>();
+            for (String entry : rawMap.values()) 
+            {
+                String[] parts = entry.split(" ");
+                Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+                // card.color = Color.valueOf(parts[0]);
+                // card.value = Value.valueOf(parts[1]);
+                cardList.add(card);
+            }
+
+
+            
+            // Put into Hand object
+            playerHand = new Hand();
+            playerHand.hand = cardList;
+            
+
+            Map<String, String> topCardMap = mapper.readValue(topCardJSON, new TypeReference<Map<String, String>>() {});
+            String topCardStr = topCardMap.values().iterator().next();
+            Card topCard = Game.parseCardFromString(topCardStr);
+
+            //see if the hand p1 has is valid ,, if not keep drawing a card
+            Game processgame = new Game();
+            Map<String, String> result = new HashMap<>();
+            while(!processgame.handIsValid(playerHand, topCard))
+            {
+                // Parse both JSON strings to LinkedHashMap to maintain order
+                LinkedHashMap<String, String> p1Hand = mapper.readValue(p1HandJSON, LinkedHashMap.class);
+                LinkedHashMap<String, String> drawDeck = mapper.readValue(drawdeckJSON, LinkedHashMap.class);
+
+                // Get first entry from handB
+                Iterator<Map.Entry<String, String>> iter = drawDeck.entrySet().iterator();
+                //if (!iter.hasNext()) return result; // handB is empty  maybe useful for error debuging 
+
+                Map.Entry<String, String> firstEntryB = iter.next();
+                String firstCardValue = firstEntryB.getValue();
+
+                // Add to handA
+                int newKey = p1Hand.size() + 1;
+                p1Hand.put(String.valueOf(newKey), firstCardValue);
+
+                // Remove from handB
+                iter.remove();
+
+                // Rebuild handB with renumbered keys starting from 1
+                LinkedHashMap<String, String> newDrawDeck = new LinkedHashMap<>();
+                int index = 1;
+                for (String value : drawDeck.values()) {
+                    newDrawDeck.put(String.valueOf(index++), value);
+                }
+
+                // Convert both maps back to JSON strings
+                result.put("p1Hand", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(p1Hand));
+                result.put("drawDeck", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(newDrawDeck));
+
+                String updateDeck = "UPDATE Hands_In_Game SET Deck_Cards = ?, P1_Hand = ? WHERE Game_ID = ?";
+                PreparedStatement pushDeck = conn.prepareStatement(updateDeck);
+                pushDeck.setString(1, result.get("drawDeck"));
+                pushDeck.setString(2, result.get("p1Hand"));
+                pushDeck.setInt(3, gameId);
+
+                pushDeck.executeUpdate();
+
+                ctx.status(200).result("CPU Game created with ID: " + gameId);
+
+
+            }
+
+            }
+
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        };
+    
+    }
 }
