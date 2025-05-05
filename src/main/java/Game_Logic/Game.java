@@ -126,6 +126,22 @@ public class Game
         return anyIsInvalid;
     }
 
+    public static int cpuHandIsValid(Hand cpu_hand, Card passedTopCard)
+    {
+        Boolean anyIsInvalid = false;
+
+        for(int i = 0; i < cpu_hand.hand.size(); i++)
+        {
+            if(is_Valid(cpu_hand.hand.get(i), passedTopCard))
+            {
+                anyIsInvalid = anyIsInvalid | true;
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     public void gameLoop()
     {   
         updateTopCard(); // Initialize top card
@@ -593,6 +609,9 @@ public class Game
     {
         
         // If the card cannot be played, return nothing
+        System.out.println("Played Card: " + playedCard.color + " " + playedCard.value);
+        System.out.println("Passed Card: " + passedTopCard.color + " " + passedTopCard.value);
+
         if(!is_Valid(playedCard, passedTopCard))
         {
             return null;
@@ -635,6 +654,14 @@ public class Game
         }
         return new Hand(cards);
     }
+
+    public static Map<String, String> cardToMapFormat(Card card) 
+    {
+        Map<String, String> formatted = new LinkedHashMap<>();
+        formatted.put("1", card.color + " " + card.value);
+        return formatted;
+    }
+    
 
     // public static Card parseCardFromString(String input) 
     // {

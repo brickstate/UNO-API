@@ -751,7 +751,8 @@ public static Handler createCPUGame() {
                 String handColumn = null;
                 String topCardJson = null;
 
-                if (handsRs.next()) {
+                if (handsRs.next()) 
+                {
                     topCardJson = handsRs.getString("Top_Card");
                     for (int i = 1; i <= 4; i++) {
                         String playerColumn = "Player_" + i;
@@ -806,7 +807,7 @@ public static Handler createCPUGame() {
 
                 // Check index
 
-                if (cardIndex < 0 || cardIndex >= playerHand.hand.size()) 
+                if (cardIndex <= 0 || cardIndex >= (playerHand.hand.size() + 1)) 
                 {
                     ctx.status(400).result("Invalid card index.");
                     return;
@@ -852,7 +853,7 @@ public static Handler createCPUGame() {
 
                 // Remove from hand
 
-                playerHand.hand.remove(cardIndex);
+                playerHand.hand.remove(cardIndex - 1);
 
                 Map<String, String> handMap = Game.handToMapFormat(playerHand);
                 String updatedHandJson = mapper.writeValueAsString(handMap); // ✅ Use the Map
@@ -878,6 +879,64 @@ public static Handler createCPUGame() {
                 ctx.result("Card played successfully.");
 
                 //TODO: check if hand is now empty
+                if(playerHand.hand.isEmpty())
+                {
+                    ctx.status(200).result("You win!");
+                    return;
+                }
+
+                //==============================================================================================================================================\
+                //                                                                CPU TURN
+                // Grab needed data
+                PreparedStatement cpuStmt = conn.prepareStatement(
+                    "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                );
+                cpuStmt.setInt(1, gameId);
+                ResultSet cpuHandRs = cpuStmt.executeQuery();
+
+                //Get CPU JSON
+                String cpuJson = null;
+                String cpuTopCardJson = null;
+                String cpuHandColumn = null;
+
+                if (cpuHandRs.next()) 
+                {
+                    cpuTopCardJson = cpuHandRs.getString("Top_Card");
+                    cpuJson = handsRs.getString("P2_Hand");   
+                }
+
+                // Get CPU hand
+
+                Hand cpuHand = null;
+
+                Map<String, String> rawCPUMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
+                
+                ArrayList<Card> cpuCardList = new ArrayList<>();
+                for (String entry : rawCPUMap.values()) 
+                {
+                    String[] parts = entry.split(" ");
+                    Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+                    cardList.add(card);
+                }
+
+                cpuHand = new Hand();
+                cpuHand.hand = cardList;
+
+                // Get new top card after player played
+
+                Map<String, String> cpuTopCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
+                String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
+                Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
+
+                // Get index of valid card
+
+                int index = Game.cpuHandIsValid(cpuHand, cputopCard);
+                Card cpuPlayedCard = playerHand.hand.get(cardIndex - 1);
+
+                
+
+
+
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -1038,9 +1097,9 @@ public static Handler createCPUGame() {
                 e.printStackTrace();
                 ctx.status(500).result("Internal server error: " + e.getMessage());
             }
-
         };
     }
+
 
     public static Handler drawCards()
     {
