@@ -9,8 +9,6 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
-import io.javalin.Javalin;
-import io.javalin.http.Handler;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -78,7 +76,7 @@ public class UnoServer {
         // "landing" endpoint
         //Include some " ... for help run ???" for verbose help dialog 
         app.get("/", ctx -> ctx.result("Uno Game API is running! \nFor detailed info on Uno Game API endpoints: \n--->" +
-        "  (Invoke-WebRequest -Uri \"http://localhost:7000/listUsers\").Content"));
+        "  (Invoke-WebRequest -Uri \"http://localhost:7000/help\").Content"));
 
         //simple hello endpoint (works)
         app.get("/hello", ctx -> ctx.result("Hello, world!"));
@@ -98,9 +96,6 @@ public class UnoServer {
         //creates a game with players
         app.post("/createPlayerGame", createPlayerGame());
 
-        //NEED TO COMPLETE (game logic connections to endpoints) prob nuke
-        //app.post("/startGame", startGame());
-
         //lets a user join the game
         app.post("/joinGame/{gameId}/{username}", joinGame());
 
@@ -108,12 +103,13 @@ public class UnoServer {
         app.get("/gameState/{gameId}", getGameState());
 
         //plays a card
-
         app.post("/playCard/{gameId}/{username}/{card}", playCard());
         
         // Moves old games into the Completed_Games table
         app.delete("/checkOldGames", checkOldGames());
         
+        app.get("/showTable/{gameId}/{username}", showTable());
+
         //Leaving this here Until I need to delete it 
         // Endpoint for testing
         //app.post("/users/register", ctx -> {
@@ -248,7 +244,7 @@ public class UnoServer {
 * 
 */
 public static Handler createCPUGame() {
-    // TODO  extend draw 7 card init functionality to CPU hand 
+    // ALSO extends draw 7 card init functionality to CPU hand 
     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
@@ -345,7 +341,7 @@ public static Handler createCPUGame() {
 
 
             /////////////////////// START TESTING [draw 7 cards init CPU Player2] //////////////////////////////
-            // TODO cpu 7 card hand init HERE
+            // cpu 7 card hand init HERE
             //ObjectMapper mapper = new ObjectMapper();         //'mapper' already a local function
 
             //grab the shuffled json draw pile
@@ -488,7 +484,7 @@ public static Handler createCPUGame() {
                     String player3 = rs.getString("Player_3");
                     String player4 = rs.getString("Player_4");
     
-        // TODO////// start of testing //////////////////////////////////////////////// TODO 
+        // TODO////// Player ? hand, draw 7 card on init ////////////////////////////////////////////////
                     // If Player1 is null, assign username
                     // checks other names if p1 is taken
                     if (player1 == null) 
@@ -898,63 +894,9 @@ public static Handler createCPUGame() {
                 .append("[GET]  /help           --> Displays this help information\n")
                 .append("    Command: Invoke-WebRequest http://localhost:7000/help\n");
 
-                //TODO more endpoints [/joinGame/:id/:username | /createCPUGame | ]
+                //TODO more endpoints [/joinGame/{gameId}/{username} | /createCPUGame | /showTable | /drawCard/{gameId}/{username}]
 
         ctx.result(helpText.toString());
-    };
-  }
-
-  //NEED TO COMB THROUGH THIS and try and get it working/ test the endpoint
-  public static Handler startGame() {
-    return ctx -> {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
-    
-        String userIdsParam = ctx.formParam("userIds"); // e.g., "1,2,3"
-        if (userIdsParam == null || userIdsParam.isEmpty()) {
-            ctx.status(400).result("Missing 'userIds' parameter.");
-            return;
-        }
-    
-        String[] userIds = userIdsParam.split(",");
-    
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
-            conn.setAutoCommit(false);
-    
-            // 1. Create new game
-            PreparedStatement gameStmt = conn.prepareStatement(
-                "INSERT INTO games (status, turn) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
-            gameStmt.setString(1, "IN_PROGRESS");
-            gameStmt.setInt(2, Integer.parseInt(userIds[0])); // First user's ID as starting turn
-            gameStmt.executeUpdate();
-    
-            ResultSet generatedKeys = gameStmt.getGeneratedKeys();
-            if (!generatedKeys.next()) {
-                conn.rollback();
-                ctx.status(500).result("Failed to create game.");
-                return;
-            }
-    
-            int gameId = generatedKeys.getInt(1);
-    
-            // 2. Shuffle and insert full deck
-            // (You would load from cards table and shuffle in Java, then insert into deck table)
-    
-            // 3. Deal cards to each user
-            // Loop through userIds, draw 7 cards for each from deck, insert into hands table
-    
-            // 4. Draw top card to discard_pile
-    
-            conn.commit();
-            ctx.status(201).result("Game started with ID: " + gameId);
-    
-        } 
-        catch (Exception e) 
-        {
-            e.printStackTrace();
-            ctx.status(500).result("Error starting game: " + e.getMessage());
-        }
     };
   }
 
@@ -1004,6 +946,66 @@ public static Handler createCPUGame() {
             e.printStackTrace();
         }
     };
+    }
+
+
+    public static Handler showTable()
+    {   // ASUMES ONLY TWO PLAYERS IN GAME ... HUMAN V. CPU
+        
+        //TODO show table should:
+        //    + # cards in CPU hand
+        //    + show json for top card
+        //    + list cards json for hand where -->  PX_Hand == [username]
+        
+        
+
+        return ctx -> {
+            String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+            String user = "testuser";
+            String password = "123";
+
+            int gameId = Integer.parseInt(ctx.pathParam("gameId"));
+            String username = ctx.pathParam("username");
+
+            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+            {
+                String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_ID = ?";
+                try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
+                    selectStmt.setInt(1, gameId);
+                    ResultSet rs = selectStmt.executeQuery();
+    
+                    if (!rs.next()) {
+                        ctx.status(404).result("Game not found.");
+                        return;
+                    }
+                    
+                    String p1_Hand = rs.getString("P1_Hand");
+                    String p2_Hand = rs.getString("P2_Hand");
+                    String top_card = rs.getString("Top_Card");
+                    
+                    //process # cards in COMPUTER hand
+                    ObjectMapper mapper = new ObjectMapper();
+                    int p2_num_cards = -1;  // p2_num_cards will be set by defailt to -1 ,, can use for error checking if needed
+                    Map<String, String> handMap = mapper.readValue(p2_Hand, Map.class);
+                    p2_num_cards = handMap.size();
+                    
+                    
+
+                    //print  [TOP CARD](.append)[card in P1_Hand]
+                    StringBuilder result = new StringBuilder();
+                    result.append("(Player2) # of cards in hand:\n").append(p2_num_cards).append("\n")
+                      .append("Top Card:\n").append(top_card).append("\n")
+                      .append("(Player 1) Your cards in hand:\n").append(p1_Hand).append("\n");
+                
+                    ctx.status(200).result(result.toString());
+                }
+            }
+            catch (SQLException e) {
+                e.printStackTrace();
+                ctx.status(500).result("Internal server error: " + e.getMessage());
+            }
+
+        };
     }
 
 }
