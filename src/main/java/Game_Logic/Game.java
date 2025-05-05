@@ -110,14 +110,14 @@ public class Game
         }
     }
 
-    public Boolean handIsValid(Hand player_hand)
+    public Boolean handIsValid(Hand player_hand, Card topCardz)
     {
         Boolean anyIsInvalid = false;
 
         
         for(int i = 0; i < hands[player_turn].hand.size(); i++)
         {
-            if(is_Valid(player_hand.hand.get(i), this.topCard))
+            if(is_Valid(player_hand.hand.get(i), topCardz))
             {
                 anyIsInvalid = anyIsInvalid | true;
             }
@@ -158,11 +158,11 @@ public class Game
             System.out.printf("Player %d's turn\n", player_turn + 1);
             System.out.printf("Player %d's cards\n", player_turn + 1);
 
-            while (!handIsValid(hands[player_turn]))
-            {
+            //while (!handIsValid(hands[player_turn]))
+            //{
                 //Draw cards until a valid card can be played
-                hands[player_turn].addCard(deck.drawCard());
-            }
+            //    hands[player_turn].addCard(deck.drawCard());
+            //}
 
             // Prints a player's hand
             for(int i = 0; i < hands[player_turn].hand.size(); i++)
@@ -383,11 +383,11 @@ public class Game
                 System.out.printf("Player %d's cards\n", player_turn + 1);
             }
             
-            while (!handIsValid(hands[player_turn]))
-            {
+            //while (!handIsValid(hands[player_turn]))
+            //{
                 //Draw cards until a valid card can be played
-                hands[player_turn].addCard(deck.drawCard());
-            }
+            //    hands[player_turn].addCard(deck.drawCard());
+            //}
 
             if(!computerTurn)
             {
