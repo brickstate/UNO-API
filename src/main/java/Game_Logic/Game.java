@@ -126,7 +126,7 @@ public class Game
         return anyIsInvalid;
     }
 
-    public int cpuHandIsValid(Hand cpu_hand, Card passedTopCard)
+    public static int cpuHandIsValid(Hand cpu_hand, Card passedTopCard)
     {
         Boolean anyIsInvalid = false;
 

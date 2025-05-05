@@ -885,50 +885,52 @@ public static Handler createCPUGame() {
                 //==============================================================================================================================================\
                 //                                                                CPU TURN
                 // Grab needed data
-                // PreparedStatement cpuStmt = conn.prepareStatement(
-                //     "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
-                // );
-                // cpuStmt.setInt(1, gameId);
-                // ResultSet cpuHandRs = cpuStmt.executeQuery();
+                PreparedStatement cpuStmt = conn.prepareStatement(
+                    "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                );
+                cpuStmt.setInt(1, gameId);
+                ResultSet cpuHandRs = cpuStmt.executeQuery();
 
-                // //Get CPU JSON
-                // String cpuJson = null;
-                // String cpuTopCardJson = null;
-                // String cpuHandColumn = null;
+                //Get CPU JSON
+                String cpuJson = null;
+                String cpuTopCardJson = null;
+                String cpuHandColumn = null;
 
-                // if (cpuHandRs.next()) 
-                // {
-                //     cpuTopCardJson = cpuHandRs.getString("Top_Card");
-                //     cpuJson = handsRs.getString("P2_Hand");   
-                // }
+                if (cpuHandRs.next()) 
+                {
+                    cpuTopCardJson = cpuHandRs.getString("Top_Card");
+                    cpuJson = handsRs.getString("P2_Hand");   
+                }
 
-                // // Get CPU hand
+                // Get CPU hand
 
-                // Hand cpuHand = null;
+                Hand cpuHand = null;
 
-                // Map<String, String> rawCPUMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
+                Map<String, String> rawCPUMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
                 
-                // ArrayList<Card> cpuCardList = new ArrayList<>();
-                // for (String entry : rawCPUMap.values()) 
-                // {
-                //     String[] parts = entry.split(" ");
-                //     Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
-                //     cardList.add(card);
-                // }
+                ArrayList<Card> cpuCardList = new ArrayList<>();
+                for (String entry : rawCPUMap.values()) 
+                {
+                    String[] parts = entry.split(" ");
+                    Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+                    cardList.add(card);
+                }
 
-                // cpuHand = new Hand();
-                // cpuHand.hand = cardList;
+                cpuHand = new Hand();
+                cpuHand.hand = cardList;
 
-                // // Get new top card after player played
+                // Get new top card after player played
 
-                // Map<String, String> cpuTopCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
-                // String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
-                // Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
+                Map<String, String> cpuTopCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
+                String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
+                Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
 
-                // // Get index of valid card
+                // Get index of valid card
 
-                // int index = Game.cpuHandIsValid(cpuHand, cputopCard);
-                // Card cpuPlayedCard = playerHand.hand.get(cardIndex - 1);
+                int index = Game.cpuHandIsValid(cpuHand, cputopCard);
+                Card cpuPlayedCard = playerHand.hand.get(cardIndex - 1);
+
+                
 
 
 
