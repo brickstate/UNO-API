@@ -21,6 +21,16 @@ public class Hand
 
     }
 
+    public Hand(ArrayList<Card> newhand)
+    {
+        hand = newhand;
+    }
+
+    public Hand()
+    {
+
+    }
+
     public Color initialize_color()
     {
         Random random = new Random();

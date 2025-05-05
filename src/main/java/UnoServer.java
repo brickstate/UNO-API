@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import Game_Logic.Game;
 import Game_Parts.Card;
@@ -27,6 +28,8 @@ import Game_Parts.Deck;
 import Game_Parts.GameState;
 import Game_Parts.Hand;
 import Game_Parts.Player;
+import Game_Parts.Types.Color;
+import Game_Parts.Types.Value;
 import io.javalin.Javalin;
 import io.javalin.http.Handler;
 
@@ -668,36 +671,53 @@ public static Handler createCPUGame() {
                 selectStmt.setInt(1, gameId);
                 ResultSet rs = selectStmt.executeQuery();
     
+                // Check if game exists
                 if (!rs.next()) {
                     ctx.status(404).result("Game not found.");
                     return;
                 }
-    
+
                 ObjectMapper mapper = new ObjectMapper();
+
                 GameState game = mapper.readValue(rs.getString("game_state"), GameState.class);
     
-                // Now find the player
-                Player player = game.players.stream()
-                    .filter(p -> p.username.equals(username))
-                    .findFirst()
-                    .orElse(null);
-    
-                if (player == null) 
-                {
+                
+                PreparedStatement handsStmt = conn.prepareStatement(
+                    "SELECT Player_1, Player_2, Player_3, Player_4, P1_Hand, P2_Hand, P3_Hand, P4_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                );
+                handsStmt.setInt(1, gameId);
+                ResultSet handsRs = handsStmt.executeQuery();
+
+                String json = null;
+                String matchedColumn = null;
+                String handColumn = null;
+                String topCardJson = null;
+
+                if (handsRs.next()) {
+                    topCardJson = handsRs.getString("Top_Card");
+                    for (int i = 1; i <= 4; i++) {
+                        String playerColumn = "Player_" + i;
+                        String name = handsRs.getString(playerColumn);
+                        if (username.equals(name)) {
+                            matchedColumn = playerColumn;
+                            handColumn = "P" + matchedColumn.split("_")[1] + "_Hand";
+                            json = handsRs.getString(handColumn);
+                            break;
+                        }
+                    }
+                }
+
+                if (matchedColumn == null) {
                     ctx.status(404).result("Player not found in game.");
                     return;
                 }
-            
-                Hand playerHand = null;
-    
+                
                 // Apply the game logic
                 
                 // First, find the correct column (P1_Hand, P2_Hand...) for this username
-                PreparedStatement findSlotStmt = conn.prepareStatement(
-                "SELECT Player_1, Player_2, Player_3, Player_4 FROM Hands_In_Game WHERE Game_ID = ?"
-                );
-                findSlotStmt.setInt(1, gameId);
-                ResultSet slotRs = findSlotStmt.executeQuery();
+                
+                handsStmt.setInt(1, gameId);
+                ResultSet slotRs = handsStmt.executeQuery();
 
                 if (!slotRs.next()) 
                 {
@@ -705,22 +725,26 @@ public static Handler createCPUGame() {
                     return;
                 }
 
-                // Get player hand
-                String handColumn = null;
+                // Put into playerHand
 
-                for (int i = 1; i <= 4; i++) 
+                Hand playerHand = null;
+
+                Map<String, String> rawMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
+                
+                ArrayList<Card> cardList = new ArrayList<>();
+                for (String entry : rawMap.values()) 
                 {
-                    String playerName = slotRs.getString("Player_" + i);
-                    if (username.equals(playerName)) 
-                    {
-                        handColumn = "P" + i + "_Hand";
-                        String handJson = slotRs.getString(handColumn);
-                        
-                        //ObjectMapper mapper = new ObjectMapper();
-                        playerHand = mapper.readValue(handJson, Hand.class);
-                        break;
-                    }
+                    String[] parts = entry.split(" ");
+                    Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+                    // card.color = Color.valueOf(parts[0]);
+                    // card.value = Value.valueOf(parts[1]);
+                    cardList.add(card);
                 }
+                
+
+                // Put into Hand object
+                playerHand = new Hand();
+                playerHand.hand = cardList;
 
                 // Check index
 
@@ -738,12 +762,17 @@ public static Handler createCPUGame() {
                     return;
                 }
 
-                String topCardJson = slotRs.getString("TopCard");
-                Card topCard = mapper.readValue(topCardJson, Card.class);
+                Map<String, String> topCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
+                String topCardStr = topCardMap.values().iterator().next();
+                Card topCard = Game.parseCardFromString(topCardStr);
+
+                //Card topCard = mapper.readValue(topCardJson, Card.class);
+
+
 
                 // Validate card
 
-                Card playedCard = playerHand.hand.get(cardIndex);
+                Card playedCard = playerHand.hand.get(cardIndex - 1);
                 playedCard = Game.playCard(playedCard, topCard);
 
                 if (playedCard == null)
@@ -756,8 +785,9 @@ public static Handler createCPUGame() {
 
                 topCardJson = mapper.writeValueAsString(playedCard);
                 PreparedStatement updateTopCardStmt = conn.prepareStatement(
-                    "UPDATE Hands_In_Game SET TopCard = ? WHERE Game_ID = ?"
+                    "UPDATE Hands_In_Game SET Top_Card = ? WHERE Game_ID = ?"
                 );
+           
                 updateTopCardStmt.setString(1, topCardJson);
                 updateTopCardStmt.setInt(2, gameId);
                 updateTopCardStmt.executeUpdate();
@@ -765,9 +795,12 @@ public static Handler createCPUGame() {
                 // Remove from hand
 
                 playerHand.hand.remove(cardIndex);
-                
+
+                Map<String, String> handMap = Game.handToMapFormat(playerHand);
+                String updatedHandJson = mapper.writeValueAsString(handMap); // ✅ Use the Map
+
+
                 // Update the hand in the corresponding column
-                String updatedHandJson = mapper.writeValueAsString(playerHand);
                 String updateHandQuery = "UPDATE Hands_In_Game SET " + handColumn + " = ? WHERE Game_ID = ?";
                 PreparedStatement updateHandStmt = conn.prepareStatement(updateHandQuery);
                 updateHandStmt.setString(1, updatedHandJson);
@@ -787,6 +820,7 @@ public static Handler createCPUGame() {
                 ctx.result("Card played successfully.");
 
                 //TODO: check if hand is now empty
+
             } catch (Exception e) {
                 e.printStackTrace();
                 ctx.status(500).result("Failed to play card: " + e.getMessage());
