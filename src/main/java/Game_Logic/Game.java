@@ -1,5 +1,8 @@
 package Game_Logic;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -111,6 +114,7 @@ public class Game
     {
         Boolean anyIsInvalid = false;
 
+        
         for(int i = 0; i < hands[player_turn].hand.size(); i++)
         {
             if(is_Valid(player_hand.hand.get(i), this.topCard))
@@ -599,4 +603,45 @@ public class Game
            
         return playedCard;
     }
+
+    public static Card parseCardFromString(String raw) {
+        String[] parts = raw.trim().split(" ");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Invalid card format: " + raw);
+        }
+    
+        Color color = Color.valueOf(parts[0].toUpperCase());
+        Value value = Value.valueOf(parts[1].toUpperCase());
+    
+        return new Card(color, value);
+    }
+
+    public static Map<String, String> handToMapFormat(Hand hand) 
+    {
+        Map<String, String> formatted = new LinkedHashMap<>();
+        for (int i = 0; i < hand.hand.size(); i++) {
+            Card card = hand.hand.get(i);
+            formatted.put(String.valueOf(i + 1), card.color + " " + card.value);
+        }
+        return formatted;
+    }
+
+    public static Hand mapToHand(Map<String, String> map) 
+    {
+        ArrayList<Card> cards = new ArrayList<>();
+        for (String value : map.values()) 
+        {
+            cards.add(parseCardFromString(value));
+        }
+        return new Hand(cards);
+    }
+
+    // public static Card parseCardFromString(String input) 
+    // {
+    //     String[] parts = input.split(" ");
+    //     return new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+    // }
+    
+
+    
 }
