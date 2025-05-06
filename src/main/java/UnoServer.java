@@ -741,7 +741,7 @@ public static Handler createCPUGame() {
     
                 
                 PreparedStatement handsStmt = conn.prepareStatement(
-                    "SELECT Player_1, Player_2, Player_3, Player_4, P1_Hand, P2_Hand, P3_Hand, P4_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                    "SELECT Player_1, Player_2, Player_3, Player_4, P1_Hand, P2_Hand, P3_Hand, P4_Hand, Top_Card, Active_Effect FROM Hands_In_Game WHERE Game_ID = ?"
                 );
                 handsStmt.setInt(1, gameId);
                 ResultSet handsRs = handsStmt.executeQuery();
@@ -750,6 +750,7 @@ public static Handler createCPUGame() {
                 String matchedColumn = null;
                 String handColumn = null;
                 String topCardJson = null;
+                String activeEffect = handsRs.getString("Active_Effect");
 
                 if (handsRs.next()) 
                 {
@@ -770,6 +771,9 @@ public static Handler createCPUGame() {
                     ctx.status(404).result("Player not found in game.");
                     return;
                 }
+
+
+                //TODO apply special card effect HERE
                 
                 // Apply the game logic
                 
@@ -803,7 +807,7 @@ public static Handler createCPUGame() {
 
                 // Put into Hand object
                 playerHand = new Hand();
-                playerHand.hand = cardList;
+                playerHand.hand = cardList; 
 
                 // Check index
 
@@ -832,6 +836,45 @@ public static Handler createCPUGame() {
                 // Validate card
 
                 Card playedCard = playerHand.hand.get(cardIndex - 1);
+
+                //TODO  set special card effect   // UPDATE SPECIAL CARD EFFECT IN DB
+                if (playedCard.value == Value.PLUSTWO)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSTWO");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (playedCard.value == Value.PLUSFOUR)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSFOUR");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (playedCard.value == Value.SKIP)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "SKIP");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (playedCard.value == Value.REVERSE)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "REVERSE");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+
                 playedCard = Game.playCard(playedCard, topCard);
 
                 if (playedCard == null) {
@@ -955,6 +998,8 @@ public static Handler createCPUGame() {
                 cpuHand = new Hand();
                 cpuHand.hand = cpuCardList;
 
+
+
                 // Get new top card after player played
 
                 Map<String, String> cpuTopCardMap = mapper.readValue(cpuTopCardJson, new TypeReference<Map<String, String>>() {});
@@ -983,6 +1028,45 @@ public static Handler createCPUGame() {
                 if (cpuPlayedCard == null) {
                     ctx.status(404).result("Card is invalid.");
                     return;
+                }
+
+
+                //TODO  set special card effect   // UPDATE SPECIAL CARD EFFECT IN DB
+                if (cpuPlayedCard.value == Value.PLUSTWO)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSTWO");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (cpuPlayedCard.value == Value.PLUSFOUR)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSFOUR");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (cpuPlayedCard.value == Value.SKIP)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "SKIP");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (cpuPlayedCard.value == Value.REVERSE)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "REVERSE");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
                 }
 
                 // Apply CPU logic
