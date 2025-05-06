@@ -1061,6 +1061,7 @@ public static Handler createCPUGame() {
                     } 
                     return;
                 }
+                
             } catch (Exception e) {
                 e.printStackTrace();
                 ctx.status(500).result("Failed to play card: " + e.getMessage());
@@ -1372,7 +1373,7 @@ public static Handler createCPUGame() {
             }
 
             Hand newPlayerHand = new Hand();
-            newPlayerHand.hand = cardList;
+            newPlayerHand.hand = newCardList;
 
 
 
@@ -1386,7 +1387,7 @@ public static Handler createCPUGame() {
 
             if (cardDrawCounter > 0)
             {
-                ctx.status(200).result("Successfully drew # of cards: " + cardDrawCounter);
+                ctx.status(200).result("Successfully drew " + cardDrawCounter + " cards." );
             }
             else
             {

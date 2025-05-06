@@ -1,5 +1,6 @@
 Game_Logic\Runner.class
 Game_Parts\GameState.class
+main\java\UnoServer$6.class
 Database.class
 Game_Parts\Hand.class
 main\java\UnoServer$1.class
@@ -15,6 +16,7 @@ Game_Parts\Types\Value.class
 User.class
 DeckTest.class
 Game_Parts\Card.class
+main\java\UnoServer$7.class
 main\java\UnoServer$2.class
 main\java\UnoServer.class
 MySQLTest.class
