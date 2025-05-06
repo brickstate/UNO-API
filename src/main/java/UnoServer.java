@@ -1234,8 +1234,17 @@ public static Handler createCPUGame() {
             //see if the hand p1 has is valid ,, if not keep drawing a card
             Game processgame = new Game();
             Map<String, String> result = new HashMap<>();
-            while(!processgame.handIsValid(playerHand, topCard))
+
+            Boolean need2draw = !(processgame.handIsValid(playerHand, topCard));
+            System.out.print("Do I need to draw this turn?:   " + need2draw );
+
+            int cardDrawCounter = 0;
+
+            // 
+            while( need2draw == true )
             {
+                
+
                 // Parse both JSON strings to LinkedHashMap to maintain order
                 LinkedHashMap<String, String> p1Hand = mapper.readValue(p1HandJSON, LinkedHashMap.class);
                 LinkedHashMap<String, String> drawDeck = mapper.readValue(drawdeckJSON, LinkedHashMap.class);
@@ -1273,10 +1282,58 @@ public static Handler createCPUGame() {
 
                 pushDeck.executeUpdate();
 
-                ctx.status(200).result("CPU Game created with ID: " + gameId);
+
+                //RESET loop condition and reset Hand & Card objects with updated json
+                // trying to now update the recognized json to continue pulling cards if hand not valid.
+                String newSelectQuery = "SELECT * FROM Hands_In_Game WHERE Game_ID = ?";
+                PreparedStatement newselectStmt = conn.prepareStatement(newSelectQuery);
+                newselectStmt.setInt(1, gameId);
+                ResultSet rs2 = newselectStmt.executeQuery();
+    
+                if (!rs2.next()) {
+                    ctx.status(404).result("Game not found.");
+                    return;
+                }
+            
+                p1HandJSON = rs2.getString("P1_Hand");
+                drawdeckJSON = rs2.getString("Deck_Cards");
+
+                //now re mapping the updated hands 
+                Map<String, String> newRawMap = mapper.readValue(p1HandJSON, new TypeReference<Map<String, String>>() {});
+
+                ArrayList<Card> newCardList = new ArrayList<>();
+            for (String entry : newRawMap.values()) 
+            {
+                String[] parts = entry.split(" ");
+                Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+                // card.color = Color.valueOf(parts[0]);
+                // card.value = Value.valueOf(parts[1]);
+                newCardList.add(card);
+            }
+
+            Hand newPlayerHand = new Hand();
+            newPlayerHand.hand = cardList;
+
+
+
+                //update the draw cards condition   //update the cards pulled counter
+                need2draw = !(processgame.handIsValid(newPlayerHand, topCard));
+                cardDrawCounter++;
+
 
 
             }
+
+            if (cardDrawCounter > 0)
+            {
+                ctx.status(200).result("Successfully drew # of cards: " + cardDrawCounter);
+            }
+            else
+            {
+                ctx.status(200).result("Your hand is Valid, no new cards were pulled. ");
+            }
+            
+
 
             }
 
