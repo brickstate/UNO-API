@@ -1005,33 +1005,39 @@ public static Handler createCPUGame() {
                 .append("    Command: Invoke-WebRequest http://localhost:7000/hello\n\n")
 
                 .append("[GET]  /listUsers      --> Lists all users in the database\n")
-                .append("    Command: Invoke-WebRequest http://localhost:7000/listUsers\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/listUsers).Content\n\n")
 
                 .append("[POST] /registerUser   --> Registers a new user with username and password\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body @{username='yourname';password='yourpass'} -ContentType \"application/x-www-form-urlencoded\"\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body @{username='yourname'}).Content\"\n\n")
 
                 .append("[POST] /createCPUGame  --> Creates a new game against CPU\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createCPUGame -Method POST\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/createCPUGame -Method POST).Content\n\n")
 
-                .append("[POST] /createPlayerGame --> Creates a new multiplayer game\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createPlayerGame -Method POST\n\n")
+                //.append("[POST] /createPlayerGame --> Creates a new multiplayer game\n")
+                //.append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createPlayerGame -Method POST\n\n")
 
                 .append("[POST] /joinGame       --> Join an existing game\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/joinGame/{gameId}/{username} -Method POST -ContentType \"application/x-www-form-urlencoded\"\n\n")
-
-                .append("[GET]  /gameState/{gameId} --> Get current state of a game\n")
-                .append("    Command: Invoke-WebRequest http://localhost:7000/gameState/1\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/joinGame/{gameId}/{username} -Method POST).Content \"\n\n")
 
                 .append("[POST] /playCard       --> Play a card in a game\n")
-                .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/playCard -Method POST -Body @{gameId='1';card='{\"color\":\"red\",\"value\":\"5\"}'} -ContentType \"application/x-www-form-urlencoded\"\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/playCard/{gameId}/{username}/{card} -Method POST).Content \"\n\n")
 
+                //TODO /drawCard/{gameId}/{username} 
+                .append("[POST] /drawCard       --> Draw cards until you have a valid hand to play\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/drawCard/{gameId}/{username} -Method POST).Content\n\n")
+
+                .append("[GET] /showTable       --> Show the CPU card count, Top-Card, and cards in Player-1 hand\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/showTable/{gameId}/{username}).Content\n\n")
+
+                .append("[GET]  /gameState      --> Get current state of a game\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/gameState/{gameId}}.Content\n\n")
+                
                 .append("[DELETE] /checkOldGames --> Move old games to completed_games table\n")
                 .append("    Command: Invoke-WebRequest -Uri http://localhost:7000/checkOldGames -Method DELETE\n\n")
 
                 .append("[GET]  /help           --> Displays this help information\n")
-                .append("    Command: Invoke-WebRequest http://localhost:7000/help\n");
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/help).Content\n");
 
-                //TODO more endpoints [/joinGame/{gameId}/{username} | /createCPUGame | /showTable | /drawCard/{gameId}/{username}]
 
         ctx.result(helpText.toString());
     };
@@ -1127,9 +1133,9 @@ public static Handler createCPUGame() {
 
                     //print  [TOP CARD](.append)[card in P1_Hand]
                     StringBuilder result = new StringBuilder();
-                    result.append("(Player2) # of cards in hand:\n").append(p2_num_cards).append("\n")
-                      .append("Top Card:\n").append(top_card).append("\n")
-                      .append("(Player 1) Your cards in hand:\n").append(p1_Hand).append("\n");
+                    result.append("(Player2) # of cards in hand:    ").append(p2_num_cards).append("\n\n")
+                      .append("Top Card:    ").append(top_card).append("\n\n")
+                      .append("(Player 1) Your cards in hand:\n").append(p1_Hand).append("\n\n");
                 
                     ctx.status(200).result(result.toString());
                 }
