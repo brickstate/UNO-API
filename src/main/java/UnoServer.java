@@ -922,7 +922,7 @@ public static Handler createCPUGame() {
                 //                                                                CPU TURN
                 // Grab needed data
                 PreparedStatement cpuStmt = conn.prepareStatement(
-                    "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                    "SELECT Player_2, P2_Hand, Top_Card, Deck_Cards FROM Hands_In_Game WHERE Game_ID = ?"
                 );
                 cpuStmt.setInt(1, gameId);
                 ResultSet cpuHandRs = cpuStmt.executeQuery();
@@ -961,12 +961,24 @@ public static Handler createCPUGame() {
                 String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
                 Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
 
-                System.out.println("cpuTopCardStr: " + cpuTopCardStr);
+                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                /// Draw logic
+                Game newGame = new Game();
+                boolean needsDraw = !(newGame.handIsValid(cpuHand, cputopCard));
+                String drawdeckJSON = cpuHandRs.getString("Deck_Cards");
+
+                
+                while(needsDraw)
+                {
+
+                }
+                
+                 
+                /// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 // Get card from index of valid card, see if none exist
 
                 int index = Game.cpuHandIsValid(cpuHand, cputopCard);
-                //index++;
 
                 System.out.println("Index: " + index);
                 if (index < 0 || index >= (cpuHand.hand.size() + 1)) 
