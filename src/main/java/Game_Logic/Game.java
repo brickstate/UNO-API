@@ -99,7 +99,7 @@ public class Game
 
     public static Boolean is_Valid(Card card, Card passedtopCard)
     {   
-        if(card.value == passedtopCard.value || card.color == passedtopCard.color)
+        if(card.value == passedtopCard.value || card.color == passedtopCard.color || passedtopCard.value == Value.COLORSWITCH || passedtopCard.value == Value.PLUSFOUR)
         {
             return true;
         }
