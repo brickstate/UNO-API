@@ -1,11 +1,9 @@
 Game_Logic\Runner.class
 Game_Parts\GameState.class
-main\java\UnoServer$6.class
 Database.class
 Game_Parts\Hand.class
 main\java\UnoServer$1.class
 UserController.class
-main\java\UnoServer$5.class
 main\java\UnoServer$4.class
 Game_Parts\Player.class
 Game_Parts\Types\Color.class

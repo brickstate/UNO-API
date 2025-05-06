@@ -32,10 +32,12 @@ public class Game
      */
     public Game()
     {
-        deck = new Deck(); // intialize deck
-        num_players = playerSetup();
-        hands = new Hand[num_players];
-
+        //deck = new Deck(); // intialize deck
+        
+        //num_players = playerSetup();
+        //num_players = 2;
+        //hands = new Hand[num_players];
+        /*
         for(int i = 0; i < num_players; i++)
         {
             hands[i] = new Hand(deck);
@@ -49,6 +51,7 @@ public class Game
         {
             gameLoop(); // start game for humans
         }
+        */
         
     }    
 
@@ -115,7 +118,7 @@ public class Game
         Boolean anyIsInvalid = false;
 
         
-        for(int i = 0; i < hands[player_turn].hand.size(); i++)
+        for(int i = 0; i < player_hand.hand.size(); i++)
         {
             if(is_Valid(player_hand.hand.get(i), topCardz))
             {

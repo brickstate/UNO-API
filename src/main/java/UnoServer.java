@@ -114,7 +114,7 @@ public class UnoServer {
         //shows information about [TopCard] [# of cards in p2 hand] [exact cards in p1 hand]
         app.get("/showTable/{gameId}/{username}", showTable());
 
-        app.post("/drawCards", drawCards());
+        app.post("/drawCards/{gameId}/{username}", drawCards());
 
         //Leaving this here Until I need to delete it 
         // Endpoint for testing
@@ -1015,8 +1015,8 @@ public static Handler createCPUGame() {
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/playCard/{gameId}/{username}/{card} -Method POST).Content \"\n\n")
 
                 //TODO /drawCard/{gameId}/{username} 
-                .append("[POST] /drawCard       --> Draw cards until you have a valid hand to play\n")
-                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/drawCard/{gameId}/{username} -Method POST).Content\n\n")
+                .append("[POST] /drawCards       --> Draw cards until you have a valid hand to play\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/drawCardsf/{gameId}/{username} -Method POST).Content\n\n")
 
                 .append("[GET] /showTable       --> Show the CPU card count, Top-Card, and cards in Player-1 hand\n")
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/showTable/{gameId}/{username}).Content\n\n")
