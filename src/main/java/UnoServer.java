@@ -935,46 +935,59 @@ public static Handler createCPUGame() {
                 if (cpuHandRs.next()) 
                 {
                     cpuTopCardJson = cpuHandRs.getString("Top_Card");
-                    cpuJson = handsRs.getString("P2_Hand");   
+                    cpuJson = cpuHandRs.getString("P2_Hand");   
                 }
 
                 // Get CPU hand
 
                 Hand cpuHand = null;
 
-                Map<String, String> rawCPUMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
+                Map<String, String> rawCPUMap = mapper.readValue(cpuJson, new TypeReference<Map<String, String>>() {});
                 
                 ArrayList<Card> cpuCardList = new ArrayList<>();
                 for (String entry : rawCPUMap.values()) 
                 {
                     String[] parts = entry.split(" ");
                     Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
-                    cardList.add(card);
+                    cpuCardList.add(card);
                 }
 
                 cpuHand = new Hand();
-                cpuHand.hand = cardList;
+                cpuHand.hand = cpuCardList;
 
                 // Get new top card after player played
 
-                Map<String, String> cpuTopCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
+                Map<String, String> cpuTopCardMap = mapper.readValue(cpuTopCardJson, new TypeReference<Map<String, String>>() {});
                 String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
                 Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
+
+                System.out.println("cpuTopCardStr: " + cpuTopCardStr);
 
                 // Get card from index of valid card, see if none exist
 
                 int index = Game.cpuHandIsValid(cpuHand, cputopCard);
-                Card cpuPlayedCard = playerHand.hand.get(index - 1);
-                cpuPlayedCard = Game.playCard(playedCard, topCard);
+                //index++;
 
-                if (playedCard == null) {
+                System.out.println("Index: " + index);
+                if (index < 0 || index >= (cpuHand.hand.size() + 1)) 
+                {
+                    ctx.status(400).result("Invalid card index.");
+                    return;
+                }
+
+                Card cpuPlayedCard = cpuHand.hand.get(index);
+                System.out.println("cpuPlayedCard: " + cpuPlayedCard.value + " " + cpuPlayedCard.color);
+
+                cpuPlayedCard = Game.playCard(cpuPlayedCard, cputopCard);
+
+                if (cpuPlayedCard == null) {
                     ctx.status(404).result("Card is invalid.");
                     return;
                 }
 
                 // Apply CPU logic
                 // Convert card to correct JSON format and put in Top_Card
-                Map<String, String> CPUplayedCardMap = Game.cardToMapFormat(playedCard);
+                Map<String, String> CPUplayedCardMap = Game.cardToMapFormat(cpuPlayedCard);
                 topCardJson = mapper.writeValueAsString(CPUplayedCardMap);
 
                 PreparedStatement updateCPUTopCardStmt = conn.prepareStatement(
@@ -986,21 +999,67 @@ public static Handler createCPUGame() {
 
                 
                 // Remove from hand
-                cpuHand.hand.remove(cardIndex - 1);
+                cpuHand.hand.remove(index);
 
-                Map<String, String> CPUhandMap = Game.handToMapFormat(playerHand);
+                Map<String, String> CPUhandMap = Game.handToMapFormat(cpuHand);
                 String CPUupdatedHandJson = mapper.writeValueAsString(CPUhandMap); // ✅ Use the Map
 
 
                 // Update the hand in the corresponding column
-                String CPUupdateHandQuery = "UPDATE Hands_In_Game SET " + handColumn + " = ? WHERE Game_ID = ?";
+                String CPUupdateHandQuery = "UPDATE Hands_In_Game SET P2_Hand = ? WHERE Game_ID = ?";
                 PreparedStatement CPUupdateHandStmt = conn.prepareStatement(CPUupdateHandQuery);
                 CPUupdateHandStmt.setString(1, CPUupdatedHandJson);
                 CPUupdateHandStmt.setInt(2, gameId);
                 CPUupdateHandStmt.executeUpdate();
 
+                // Save updated game state
+                String updatedCPUJson = mapper.writeValueAsString(game);
+                PreparedStatement updateCPUStmt = conn.prepareStatement(
+                    "UPDATE Game_Playing SET game_state = ? WHERE Game_ID = ?"
+                );
+                updateCPUStmt.setString(1, updatedCPUJson);
+                updateCPUStmt.setInt(2, gameId);
+                updateCPUStmt.executeUpdate();
 
+                // Check if CPU hand is empty - Win condition
 
+                if(cpuHand.hand.isEmpty())
+                {
+                    ctx.status(200).result("CPU wins!");
+
+                    PreparedStatement deleteStmt = conn.prepareStatement(
+                    "DELETE FROM Hands_In_Game WHERE Game_ID = ?"
+                    );
+                    deleteStmt.setInt(1, gameId);
+                    deleteStmt.executeUpdate();
+
+                    // Step 1: Fetch the row from Game_Playing
+                    PreparedStatement moveStmt = conn.prepareStatement(
+                        "SELECT * FROM Game_Playing WHERE Game_ID = ?"
+                    );
+                    moveStmt.setInt(1, gameId);
+                    ResultSet rsMove = moveStmt.executeQuery();
+
+                    if (rsMove.next()) 
+                    {
+                        // Step 2: Insert into Completed_Games (adjust column names as needed)
+                        PreparedStatement insertStmt = conn.prepareStatement(
+                            "INSERT INTO Completed_Games (Game_ID, game_state, Is_CPU_Game) VALUES (?, ?, ?)"
+                        );
+                        insertStmt.setInt(1, rsMove.getInt("Game_ID"));
+                        insertStmt.setString(2, rsMove.getString("game_state"));
+                        insertStmt.setBoolean(3, rsMove.getBoolean("Is_CPU_Game"));
+                        insertStmt.executeUpdate();
+
+                        // Step 3: Delete from Game_Playing
+                        PreparedStatement deletePlayingStmt = conn.prepareStatement(
+                            "DELETE FROM Game_Playing WHERE Game_ID = ?"
+                        );
+                        deletePlayingStmt.setInt(1, gameId);
+                        deletePlayingStmt.executeUpdate();
+                    } 
+                    return;
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 ctx.status(500).result("Failed to play card: " + e.getMessage());
