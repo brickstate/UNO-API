@@ -9,7 +9,7 @@ import Game_Parts.Types.Value;
 public class Deck 
 {
     private int cardNum = 108;
-    private ArrayList<Card> deck;
+    public ArrayList<Card> deck;
     private ArrayList<Card> discard;
  
     public Deck() 
@@ -55,6 +55,11 @@ public class Deck
         // Draw a card from the pile and put in discard pile
         // This is the starting card
         discard.add(drawCard());
+    }
+
+    public Deck(ArrayList<Card> newDeck)
+    {
+        deck = newDeck;
     }
  
     public Card drawCard() 

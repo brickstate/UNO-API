@@ -922,7 +922,7 @@ public static Handler createCPUGame() {
                 //                                                                CPU TURN
                 // Grab needed data
                 PreparedStatement cpuStmt = conn.prepareStatement(
-                    "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                    "SELECT Player_2, P2_Hand, Top_Card, Deck_Cards FROM Hands_In_Game WHERE Game_ID = ?"
                 );
                 cpuStmt.setInt(1, gameId);
                 ResultSet cpuHandRs = cpuStmt.executeQuery();
@@ -961,12 +961,28 @@ public static Handler createCPUGame() {
                 String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
                 Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
 
-                System.out.println("cpuTopCardStr: " + cpuTopCardStr);
+                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                /// Draw logic
+                Game newGame = new Game();
+                boolean needsDraw = !(newGame.handIsValid(cpuHand, cputopCard));
+                String drawdeckJSON = cpuHandRs.getString("Deck_Cards");
+
+                Map<String, String> deckMap = mapper.readValue(drawdeckJSON, new TypeReference<Map<String, String>>() {});
+                Deck CPUDeck = Game.mapToDeck(deckMap);
+                
+                while(needsDraw)
+                {
+                    cpuHand.addCard(CPUDeck.drawCard());
+                    needsDraw = !(newGame.handIsValid(cpuHand, cputopCard));
+                }
+
+                Map<String, String> deckMaptoDB = Game.DeckToMapFormat(CPUDeck);
+                String newCPUDeckJSON = mapper.writeValueAsString(deckMaptoDB); // ✅ Use the Map
+                /// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 // Get card from index of valid card, see if none exist
 
                 int index = Game.cpuHandIsValid(cpuHand, cputopCard);
-                //index++;
 
                 System.out.println("Index: " + index);
                 if (index < 0 || index >= (cpuHand.hand.size() + 1)) 
@@ -991,10 +1007,11 @@ public static Handler createCPUGame() {
                 topCardJson = mapper.writeValueAsString(CPUplayedCardMap);
 
                 PreparedStatement updateCPUTopCardStmt = conn.prepareStatement(
-                    "UPDATE Hands_In_Game SET Top_Card = ? WHERE Game_ID = ?"
+                    "UPDATE Hands_In_Game SET Top_Card = ?, Deck_Cards = ? WHERE Game_ID = ?"
                 );
                 updateCPUTopCardStmt.setString(1, topCardJson);
-                updateCPUTopCardStmt.setInt(2, gameId);
+                updateCPUTopCardStmt.setString(2, newCPUDeckJSON);  
+                updateCPUTopCardStmt.setInt(3, gameId);
                 updateCPUTopCardStmt.executeUpdate();
 
                 
@@ -1004,6 +1021,8 @@ public static Handler createCPUGame() {
                 Map<String, String> CPUhandMap = Game.handToMapFormat(cpuHand);
                 String CPUupdatedHandJson = mapper.writeValueAsString(CPUhandMap); // ✅ Use the Map
 
+                Map<String, String> CPUDeckMap = Game.DeckToMapFormat(CPUDeck);
+                String CPUupdatedDeckJson = mapper.writeValueAsString(CPUhandMap); // 😍🛒 Use the Map
 
                 // Update the hand in the corresponding column
                 String CPUupdateHandQuery = "UPDATE Hands_In_Game SET P2_Hand = ? WHERE Game_ID = ?";
