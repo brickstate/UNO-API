@@ -144,6 +144,20 @@ public class Game
 
         return -1;
     }
+    public static Hand drawCPU(Hand CPUhand, Deck CPUDeck, Card topCard)
+    {
+        boolean needDraw = (cpuHandIsValid(CPUhand, topCard) != -1);
+
+        while(needDraw)
+        {
+            CPUhand.addCard(CPUDeck.drawCard());
+            needDraw = (cpuHandIsValid(CPUhand, topCard) != -1);
+        }
+
+
+
+        return null;
+    }
 
     public void gameLoop()
     {   
@@ -648,6 +662,16 @@ public class Game
         return formatted;
     }
 
+    public static Map<String, String> DeckToMapFormat(Deck deck) 
+    {
+        Map<String, String> formatted = new LinkedHashMap<>();
+        for (int i = 0; i < deck.deck.size(); i++) {
+            Card card = deck.deck.get(i);
+            formatted.put(String.valueOf(i + 1), card.color + " " + card.value);
+        }
+        return formatted;
+    }
+
     public static Hand mapToHand(Map<String, String> map) 
     {
         ArrayList<Card> cards = new ArrayList<>();
@@ -656,6 +680,16 @@ public class Game
             cards.add(parseCardFromString(value));
         }
         return new Hand(cards);
+    }
+
+    public static Deck mapToDeck(Map<String, String> map) 
+    {
+        ArrayList<Card> cards = new ArrayList<>();
+        for (String value : map.values()) 
+        {
+            cards.add(parseCardFromString(value));
+        }
+        return new Deck(cards);
     }
 
     public static Map<String, String> cardToMapFormat(Card card) 
