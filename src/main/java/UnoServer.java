@@ -917,7 +917,7 @@ public static Handler createCPUGame() {
 
                     return;
                 }
-
+                /*
                 //==============================================================================================================================================\
                 //                                                                CPU TURN
                 // Grab needed data
@@ -999,7 +999,7 @@ public static Handler createCPUGame() {
                 CPUupdateHandStmt.setInt(2, gameId);
                 CPUupdateHandStmt.executeUpdate();
 
-
+                */
 
             } catch (Exception e) {
                 e.printStackTrace();
