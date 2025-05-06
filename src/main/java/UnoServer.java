@@ -834,22 +834,22 @@ public static Handler createCPUGame() {
                 Card playedCard = playerHand.hand.get(cardIndex - 1);
                 playedCard = Game.playCard(playedCard, topCard);
 
-                if (playedCard == null)
-                {
+                if (playedCard == null) {
                     ctx.status(404).result("Card is invalid.");
                     return;
                 }
 
-                // Change top card
+                // Convert card to correct JSON format
+                Map<String, String> playedCardMap = Game.cardToMapFormat(playedCard);
+                topCardJson = mapper.writeValueAsString(playedCardMap);
 
-                topCardJson = mapper.writeValueAsString(playedCard);
                 PreparedStatement updateTopCardStmt = conn.prepareStatement(
                     "UPDATE Hands_In_Game SET Top_Card = ? WHERE Game_ID = ?"
                 );
-           
                 updateTopCardStmt.setString(1, topCardJson);
                 updateTopCardStmt.setInt(2, gameId);
                 updateTopCardStmt.executeUpdate();
+
 
                 // Remove from hand
 
@@ -878,60 +878,93 @@ public static Handler createCPUGame() {
     
                 ctx.result("Card played successfully.");
 
-                //TODO: check if hand is now empty
+                // Check if hand is now empty - Win condition
                 if(playerHand.hand.isEmpty())
                 {
                     ctx.status(200).result("You win!");
+
+                    PreparedStatement deleteStmt = conn.prepareStatement(
+                    "DELETE FROM Hands_In_Game WHERE Game_ID = ?"
+                    );
+                    deleteStmt.setInt(1, gameId);
+                    deleteStmt.executeUpdate();
+
+                    // Step 1: Fetch the row from Game_Playing
+                    PreparedStatement moveStmt = conn.prepareStatement(
+                        "SELECT * FROM Game_Playing WHERE Game_ID = ?"
+                    );
+                    moveStmt.setInt(1, gameId);
+                    ResultSet rsMove = moveStmt.executeQuery();
+
+                    if (rsMove.next()) 
+                    {
+                        // Step 2: Insert into Completed_Games (adjust column names as needed)
+                        PreparedStatement insertStmt = conn.prepareStatement(
+                            "INSERT INTO Completed_Games (Game_ID, game_state, Is_CPU_Game) VALUES (?, ?, ?)"
+                        );
+                        insertStmt.setInt(1, rsMove.getInt("Game_ID"));
+                        insertStmt.setString(2, rsMove.getString("game_state"));
+                        insertStmt.setBoolean(3, rsMove.getBoolean("Is_CPU_Game"));
+                        insertStmt.executeUpdate();
+
+                        // Step 3: Delete from Game_Playing
+                        PreparedStatement deletePlayingStmt = conn.prepareStatement(
+                            "DELETE FROM Game_Playing WHERE Game_ID = ?"
+                        );
+                        deletePlayingStmt.setInt(1, gameId);
+                        deletePlayingStmt.executeUpdate();
+                    } 
+
                     return;
                 }
 
                 //==============================================================================================================================================\
                 //                                                                CPU TURN
                 // Grab needed data
-                PreparedStatement cpuStmt = conn.prepareStatement(
-                    "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
-                );
-                cpuStmt.setInt(1, gameId);
-                ResultSet cpuHandRs = cpuStmt.executeQuery();
+            //     PreparedStatement cpuStmt = conn.prepareStatement(
+            //         "SELECT Player_2, P2_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+            //     );
+            //     cpuStmt.setInt(1, gameId);
+            //     ResultSet cpuHandRs = cpuStmt.executeQuery();
 
-                //Get CPU JSON
-                String cpuJson = null;
-                String cpuTopCardJson = null;
-                String cpuHandColumn = null;
+            //     //Get CPU JSON
+            //     String cpuJson = null;
+            //     String cpuTopCardJson = null;
+            //     String cpuHandColumn = null;
 
-                if (cpuHandRs.next()) 
-                {
-                    cpuTopCardJson = cpuHandRs.getString("Top_Card");
-                    cpuJson = handsRs.getString("P2_Hand");   
-                }
+            //     if (cpuHandRs.next()) 
+            //     {
+            //         cpuTopCardJson = cpuHandRs.getString("Top_Card");
+            //         cpuJson = handsRs.getString("P2_Hand");   
+            //     }
 
-                // Get CPU hand
+            //     // Get CPU hand
 
-                Hand cpuHand = null;
+            //     Hand cpuHand = null;
 
-                Map<String, String> rawCPUMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
+            //     Map<String, String> rawCPUMap = mapper.readValue(json, new TypeReference<Map<String, String>>() {});
                 
-                ArrayList<Card> cpuCardList = new ArrayList<>();
-                for (String entry : rawCPUMap.values()) 
-                {
-                    String[] parts = entry.split(" ");
-                    Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
-                    cardList.add(card);
-                }
+            //     ArrayList<Card> cpuCardList = new ArrayList<>();
+            //     for (String entry : rawCPUMap.values()) 
+            //     {
+            //         String[] parts = entry.split(" ");
+            //         Card card = new Card(Color.valueOf(parts[0]), Value.valueOf(parts[1]));
+            //         cardList.add(card);
+            //     }
 
-                cpuHand = new Hand();
-                cpuHand.hand = cardList;
+            //     cpuHand = new Hand();
+            //     cpuHand.hand = cardList;
 
-                // Get new top card after player played
+            //     // Get new top card after player played
 
-                Map<String, String> cpuTopCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
-                String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
-                Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
+            //     Map<String, String> cpuTopCardMap = mapper.readValue(topCardJson, new TypeReference<Map<String, String>>() {});
+            //     String cpuTopCardStr = cpuTopCardMap.values().iterator().next();
+            //     Card cputopCard = Game.parseCardFromString(cpuTopCardStr);
 
-                // Get index of valid card
+            //     // Get card from index of valid card
 
-                int index = Game.cpuHandIsValid(cpuHand, cputopCard);
-                Card cpuPlayedCard = playerHand.hand.get(cardIndex - 1);
+            //     int index = Game.cpuHandIsValid(cpuHand, cputopCard);
+            //     Card cpuPlayedCard = playerHand.hand.get(cardIndex - 1);
 
                 
 
