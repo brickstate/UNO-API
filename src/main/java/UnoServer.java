@@ -979,14 +979,14 @@ public static Handler createCPUGame() {
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/joinGame/{gameId}/{username} -Method POST).Content \"\n\n")
 
                 .append("[POST] /playCard       --> Play a card in a game\n")
-                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/playCard -Method POST -Body @{gameId='1';card='{\"color\":\"red\",\"value\":\"5\"}'}).Content \"\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/playCard/{gameId}/{username}/{card} -Method POST).Content \"\n\n")
 
                 //TODO /drawCard/{gameId}/{username} 
                 .append("[POST] /drawCard       --> Draw cards until you have a valid hand to play\n")
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/drawCard/{gameId}/{username} -Method POST).Content\n\n")
 
                 .append("[GET] /showTable       --> Show the CPU card count, Top-Card, and cards in Player-1 hand\n")
-                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/showTable).Content\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/showTable/{gameId}/{username}).Content\n\n")
 
                 .append("[GET]  /gameState      --> Get current state of a game\n")
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/gameState/{gameId}}.Content\n\n")
@@ -1092,9 +1092,9 @@ public static Handler createCPUGame() {
 
                     //print  [TOP CARD](.append)[card in P1_Hand]
                     StringBuilder result = new StringBuilder();
-                    result.append("(Player2) # of cards in hand:\n").append(p2_num_cards).append("\n")
-                      .append("Top Card:\n").append(top_card).append("\n")
-                      .append("(Player 1) Your cards in hand:\n").append(p1_Hand).append("\n");
+                    result.append("(Player2) # of cards in hand:    ").append(p2_num_cards).append("\n\n")
+                      .append("Top Card:    ").append(top_card).append("\n\n")
+                      .append("(Player 1) Your cards in hand:\n").append(p1_Hand).append("\n\n");
                 
                     ctx.status(200).result(result.toString());
                 }
