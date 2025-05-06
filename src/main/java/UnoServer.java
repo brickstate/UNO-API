@@ -112,7 +112,7 @@ public class UnoServer {
         app.post("/playCard/{gameId}/{username}/{card}", playCard());
         
         // Moves old games into the Completed_Games table
-        app.delete("/checkOldGames", checkOldGames());
+        //app.delete("/checkOldGames", checkOldGames());
         
         //Leaving this here Until I need to delete it 
         // Endpoint for testing
@@ -899,50 +899,50 @@ public static Handler createCPUGame() {
     };
   }
 
-  public static Handler checkOldGames() {
-    String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-    String user = "testuser";
-    String password = "123";
-    int gameTimeout = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+//   public static Handler checkOldGames() {
+//     String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+//     String user = "testuser";
+//     String password = "123";
+//     int gameTimeout = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-    try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
-        // Select games older than 24 hours
-        String selectOldGamesSql = "SELECT Game ID FROM Game_Playing WHERE Recent Update < ?";
-        PreparedStatement selectStmt = conn.prepareStatement(selectOldGamesSql);
-        long cutoffTime = new Date().getTime() - gameTimeout;
-        selectStmt.setTimestamp(1, new Timestamp(cutoffTime));
-        ResultSet rs = selectStmt.executeQuery();
+//     try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+//         // Select games older than 24 hours
+//         String selectOldGamesSql = "SELECT Game ID FROM Game_Playing WHERE Recent Update < ?";
+//         PreparedStatement selectStmt = conn.prepareStatement(selectOldGamesSql);
+//         long cutoffTime = new Date().getTime() - gameTimeout;
+//         selectStmt.setTimestamp(1, new Timestamp(cutoffTime));
+//         ResultSet rs = selectStmt.executeQuery();
 
-        while (rs.next()) {
-            int gameId = rs.getInt("Game_ID");
-            String gameState = rs.getString("game_state");
-            boolean isCpuGame = rs.getBoolean("Is_CPU_Game");
+//         while (rs.next()) {
+//             int gameId = rs.getInt("Game_ID");
+//             String gameState = rs.getString("game_state");
+//             boolean isCpuGame = rs.getBoolean("Is_CPU_Game");
 
-            // Insert the old game into Game_Completed
-            String insertSql = "INSERT INTO Game_Completed (Game_ID, game_state, Is_CPU_Game, completed_at) VALUES (?, ?, ?, NOW())";
-            PreparedStatement insertStmt = conn.prepareStatement(insertSql);
-            insertStmt.setInt(1, gameId);
-            insertStmt.setString(2, gameState);
-            insertStmt.setBoolean(3, isCpuGame);
-            insertStmt.executeUpdate();
+//             // Insert the old game into Game_Completed
+//             String insertSql = "INSERT INTO Game_Completed (Game_ID, game_state, Is_CPU_Game, completed_at) VALUES (?, ?, ?, NOW())";
+//             PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+//             insertStmt.setInt(1, gameId);
+//             insertStmt.setString(2, gameState);
+//             insertStmt.setBoolean(3, isCpuGame);
+//             insertStmt.executeUpdate();
 
-            // Delete the game from Game_Playing
-            String deleteSql = "DELETE FROM Game_Playing WHERE game_id = ?";
-            PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
-            deleteStmt.setInt(1, gameId);
-            deleteStmt.executeUpdate();
+//             // Delete the game from Game_Playing
+//             String deleteSql = "DELETE FROM Game_Playing WHERE game_id = ?";
+//             PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+//             deleteStmt.setInt(1, gameId);
+//             deleteStmt.executeUpdate();
 
-            // Delete the game from Hands_In_Game table
-            String deleteHandsSql = "DELETE FROM Hands_In_Game WHERE game_id = ?";
-            PreparedStatement deleteHandsStmt = conn.prepareStatement(deleteHandsSql);
-            deleteStmt.setInt(1, gameId);
-            deleteStmt.executeUpdate();
+//             // Delete the game from Hands_In_Game table
+//             String deleteHandsSql = "DELETE FROM Hands_In_Game WHERE game_id = ?";
+//             PreparedStatement deleteHandsStmt = conn.prepareStatement(deleteHandsSql);
+//             deleteStmt.setInt(1, gameId);
+//             deleteStmt.executeUpdate();
 
-            //System.out.println("Moved game ID " + gameId + " to completed games.");
-        }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+//             //System.out.println("Moved game ID " + gameId + " to completed games.");
+//         }
+//         } catch (Exception e) {
+//             e.printStackTrace();
+//         }
+//     }
 
 }
