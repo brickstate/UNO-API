@@ -741,7 +741,7 @@ public static Handler createCPUGame() {
     
                 
                 PreparedStatement handsStmt = conn.prepareStatement(
-                    "SELECT Player_1, Player_2, Player_3, Player_4, P1_Hand, P2_Hand, P3_Hand, P4_Hand, Top_Card FROM Hands_In_Game WHERE Game_ID = ?"
+                    "SELECT Player_1, Player_2, Player_3, Player_4, P1_Hand, P2_Hand, P3_Hand, P4_Hand, Top_Card, Active_Effect, Deck_Cards FROM Hands_In_Game WHERE Game_ID = ?"
                 );
                 handsStmt.setInt(1, gameId);
                 ResultSet handsRs = handsStmt.executeQuery();
@@ -750,6 +750,8 @@ public static Handler createCPUGame() {
                 String matchedColumn = null;
                 String handColumn = null;
                 String topCardJson = null;
+                String activeEffect = null;
+                String deckJson = null;
 
                 if (handsRs.next()) 
                 {
@@ -764,12 +766,17 @@ public static Handler createCPUGame() {
                             break;
                         }
                     }
+                    activeEffect = handsRs.getString("Active_Effect");
+                    deckJson = handsRs.getString("Deck_Cards");
                 }
 
                 if (matchedColumn == null) {
                     ctx.status(404).result("Player not found in game.");
                     return;
                 }
+
+
+                
                 
                 // Apply the game logic
                 
@@ -803,7 +810,30 @@ public static Handler createCPUGame() {
 
                 // Put into Hand object
                 playerHand = new Hand();
-                playerHand.hand = cardList;
+                playerHand.hand = cardList; 
+
+                //TODO apply special card effect HERE
+                Map<String, String> deckRawMap = mapper.readValue(deckJson, new TypeReference<Map<String, String>>() {});
+                Deck deckObj = Game.mapToDeck(deckRawMap);
+
+                if (activeEffect == "PLUSTWO")
+                {
+                    playerHand.addCard(deckObj.drawCard());
+                    playerHand.addCard(deckObj.drawCard());
+                }
+                else if (activeEffect == "PLUSFOUR")
+                {
+                    playerHand.addCard(deckObj.drawCard());
+                    playerHand.addCard(deckObj.drawCard());
+                    playerHand.addCard(deckObj.drawCard());
+                    playerHand.addCard(deckObj.drawCard());
+                }
+                else if (activeEffect == "SKIP")
+                {
+                    return;
+                    // prob gonna need to wrap "playCard" stuff with an if
+                }
+
 
                 // Check index
 
@@ -828,10 +858,49 @@ public static Handler createCPUGame() {
                 //Card topCard = mapper.readValue(topCardJson, Card.class);
 
 
-
+                // TODO check if the activeEffect == "SKIP"  then skip over this section pretty much
                 // Validate card
 
                 Card playedCard = playerHand.hand.get(cardIndex - 1);
+
+                //TODO  set special card effect   // UPDATE SPECIAL CARD EFFECT IN DB
+                if (playedCard.value == Value.PLUSTWO)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSTWO");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (playedCard.value == Value.PLUSFOUR)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSFOUR");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (playedCard.value == Value.SKIP)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "SKIP");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (playedCard.value == Value.REVERSE)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "REVERSE");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+
                 playedCard = Game.playCard(playedCard, topCard);
 
                 if (playedCard == null) {
@@ -856,7 +925,9 @@ public static Handler createCPUGame() {
                 playerHand.hand.remove(cardIndex - 1);
 
                 Map<String, String> handMap = Game.handToMapFormat(playerHand);
+                Map<String, String> deckMapz = Game.DeckToMapFormat(deckObj);
                 String updatedHandJson = mapper.writeValueAsString(handMap); // ✅ Use the Map
+                String updatedDeckJson = mapper.writeValueAsString(deckMapz);
 
 
                 // Update the hand in the corresponding column
@@ -865,6 +936,14 @@ public static Handler createCPUGame() {
                 updateHandStmt.setString(1, updatedHandJson);
                 updateHandStmt.setInt(2, gameId);
                 updateHandStmt.executeUpdate();
+
+                //TODO update the Deck_Cards json
+                String updateDeckJson = "UPDATE Hands_In_Game SET Deck_Cards = ? WHERE Game_ID = ?";
+                PreparedStatement updateDeckStmt = conn.prepareStatement(updateDeckJson);
+                updateDeckStmt.setString(1, updatedDeckJson);
+                updateDeckStmt.setInt(2, gameId);
+                updateDeckStmt.executeUpdate();
+                
 
     
                 // Save updated game state
@@ -920,7 +999,7 @@ public static Handler createCPUGame() {
                 //                                                                CPU TURN
                 // Grab needed data
                 PreparedStatement cpuStmt = conn.prepareStatement(
-                    "SELECT Player_2, P2_Hand, Top_Card, Deck_Cards FROM Hands_In_Game WHERE Game_ID = ?"
+                    "SELECT Player_2, P2_Hand, Top_Card, Deck_Cards, Active_Effect FROM Hands_In_Game WHERE Game_ID = ?"
                 );
                 cpuStmt.setInt(1, gameId);
                 ResultSet cpuHandRs = cpuStmt.executeQuery();
@@ -929,11 +1008,13 @@ public static Handler createCPUGame() {
                 String cpuJson = null;
                 String cpuTopCardJson = null;
                 String cpuHandColumn = null;
-
+                activeEffect = null;
                 if (cpuHandRs.next()) 
                 {
                     cpuTopCardJson = cpuHandRs.getString("Top_Card");
-                    cpuJson = cpuHandRs.getString("P2_Hand");   
+                    cpuJson = cpuHandRs.getString("P2_Hand");  
+                    activeEffect = cpuHandRs.getString("Active_Effect");
+                     
                 }
 
                 // Get CPU hand
@@ -952,6 +1033,8 @@ public static Handler createCPUGame() {
 
                 cpuHand = new Hand();
                 cpuHand.hand = cpuCardList;
+                
+
 
                 // Get new top card after player played
 
@@ -962,12 +1045,36 @@ public static Handler createCPUGame() {
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 /// Draw logic
                 Game newGame = new Game();
-                boolean needsDraw = !(newGame.handIsValid(cpuHand, cputopCard));
+                
+                //TODO make sure this isnt broken
                 String drawdeckJSON = cpuHandRs.getString("Deck_Cards");
 
                 Map<String, String> deckMap = mapper.readValue(drawdeckJSON, new TypeReference<Map<String, String>>() {});
                 Deck CPUDeck = Game.mapToDeck(deckMap);
                 
+
+                //TODO Plus2 & Plus4 logic here
+                if (activeEffect == "PLUSTWO")
+                {
+                    cpuHand.addCard(CPUDeck.drawCard());
+                    cpuHand.addCard(CPUDeck.drawCard());
+                }
+                else if (activeEffect == "PLUSFOUR")
+                {
+                    cpuHand.addCard(CPUDeck.drawCard());
+                    cpuHand.addCard(CPUDeck.drawCard());
+                    cpuHand.addCard(CPUDeck.drawCard());
+                    cpuHand.addCard(CPUDeck.drawCard());
+                }
+                else if (activeEffect == "SKIP")
+                {
+                    return;
+                }
+
+                
+
+                boolean needsDraw = !(newGame.handIsValid(cpuHand, cputopCard));
+
                 while(needsDraw)
                 {
                     cpuHand.addCard(CPUDeck.drawCard());
@@ -997,6 +1104,45 @@ public static Handler createCPUGame() {
                 if (cpuPlayedCard == null) {
                     ctx.status(404).result("Card is invalid.");
                     return;
+                }
+
+
+                //TODO  set special card effect   // UPDATE SPECIAL CARD EFFECT IN DB
+                if (cpuPlayedCard.value == Value.PLUSTWO)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSTWO");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (cpuPlayedCard.value == Value.PLUSFOUR)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "PLUSFOUR");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (cpuPlayedCard.value == Value.SKIP)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "SKIP");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
+                }
+                else if (cpuPlayedCard.value == Value.REVERSE)
+                {
+                    PreparedStatement updateSpecailEffect = conn.prepareStatement(
+                    "UPDATE Hands_In_Game SET Active_Effect = ? WHERE Game_ID = ?"
+                    );
+                    updateSpecailEffect.setString(1, "REVERSE");
+                    updateSpecailEffect.setInt(2, gameId);
+                    updateSpecailEffect.executeUpdate();
                 }
 
                 // Apply CPU logic
@@ -1312,7 +1458,7 @@ public static Handler createCPUGame() {
             Map<String, String> result = new HashMap<>();
 
             Boolean need2draw = !(processgame.handIsValid(playerHand, topCard));
-            System.out.print("Do I need to draw this turn?:   " + need2draw );
+            //System.out.print("Do I need to draw this turn?:   " + need2draw );
 
             int cardDrawCounter = 0;
 
