@@ -60,13 +60,15 @@ import io.javalin.http.Handler;
 // 5. Other shi idk bruh 1->4 was all i could think about now
 
 public class UnoServer {
+    public static String jdbcUrl = "jdbc:mysql://sample-project-brickers-2025:us-east1:beachedwhaledb:3306/GameDB";
+
     public static void main(String[] args) {
 
         //NOTE when we get this running in docker we may need to revisit "jdbcUrl"
         //    and change localhost -> ?docker.something?
 
         //Necessary for the server to connect to Cloud SQL Proxy
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         //yes I hardcoded the user and password to the DB idc 
         String user = "testuser";
         String password = "123";
@@ -141,7 +143,7 @@ public class UnoServer {
     public static Handler listUsers(){
 
         return ctx -> {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
@@ -182,7 +184,7 @@ public class UnoServer {
 
   public static Handler registerUser(){
     return ctx -> {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
@@ -251,7 +253,7 @@ public class UnoServer {
 */
 public static Handler createCPUGame() {
     // ALSO extends draw 7 card init functionality to CPU hand 
-    String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+    // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
 
@@ -414,7 +416,7 @@ public static Handler createCPUGame() {
 
     public static Handler createPlayerGame() 
     {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
@@ -459,7 +461,7 @@ public static Handler createCPUGame() {
     public static Handler joinGame() 
     {//TODO MAKE SURE IT WORKS 
     
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
@@ -683,7 +685,7 @@ public static Handler createCPUGame() {
 
     public static Handler getGameState() 
     {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
 
@@ -712,7 +714,7 @@ public static Handler createCPUGame() {
      * 
      */
     public static Handler playCard() {
-        String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+        // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         String user = "testuser";
         String password = "123";
     
@@ -1143,7 +1145,7 @@ public static Handler createCPUGame() {
 
   public static Handler checkOldGames() {
     return ctx -> {
-    String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+    // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
     String user = "testuser";
     String password = "123";
     int gameTimeout = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -1198,7 +1200,7 @@ public static Handler createCPUGame() {
         //    + list cards json for hand where -->  PX_Hand == [username]
         
         return ctx -> {
-            String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+            // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
             String user = "testuser";
             String password = "123";
 
@@ -1253,7 +1255,7 @@ public static Handler createCPUGame() {
         //   + call isHandValid() --> return T || F;
         //   + WHILE ... !valid() --> (draw card --+> p1_Hand) || valid() --> (do nothing ,, no need to draw)  
         return ctx -> {
-            String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
+            // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
             String user = "testuser";
             String password = "123";
 

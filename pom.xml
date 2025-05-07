@@ -3,22 +3,25 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
+
   <!-- Required Project Information -->
   <modelVersion>4.0.0</modelVersion>
+
 
   <groupId>com.example</groupId> <!-- Change this to your project's group -->
   <artifactId>uno-server</artifactId> <!-- Change this to your project name -->
   <version>1.0-SNAPSHOT</version> <!-- Change this to your project version -->
 
+
   <!-- Dependencies Section -->
   <dependencies>
-    
+   
     <dependency>
       <groupId>io.javalin</groupId>
       <artifactId>javalin</artifactId>
       <version>4.5.0</version> <!-- Use Javalin 4.x -->
     </dependency>
-    
+   
     <!-- SLF4J Simple logging implementation -->
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -26,12 +29,14 @@
       <version>1.7.31</version> <!-- Use version 1.7.31 or the version you prefer -->
     </dependency>
 
+
     <!-- NEED for Cloud Auth Proxy -->
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
       <version>8.0.33</version>
     </dependency>
+
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -41,10 +46,15 @@
 
 
 
+
+
+
   </dependencies>
+
 
   <!-- Build Section -->
   <build>
+    <finalName>app</finalName>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -56,6 +66,37 @@
           <!--<mainClass>main.java.DeckTest</mainClass>-->
         </configuration>
       </plugin>
+      <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-shade-plugin</artifactId>
+    <version>3.4.1</version>
+    <configuration>
+        <transformers>
+            <transformer
+                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <mainClass>main.java.UnoServer</mainClass> <!-- Here you should put the main class of your application -->
+            </transformer>
+        </transformers>
+        <filters>
+            <filter> <!-- This filter is needed to avoid a bug in the shade plugin -->
+                <artifact>*:*</artifact>
+                <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                </excludes>
+            </filter>
+        </filters>
+    </configuration>
+    <executions>
+        <execution>
+            <phase>package</phase>
+            <goals>
+                <goal>shade</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
       <!--
       <plugin>
       <groupId>org.codehaus.mojo</groupId>
@@ -76,4 +117,7 @@
     </plugins>
   </build>
 
+
 </project>
+
+
