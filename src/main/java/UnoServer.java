@@ -1199,15 +1199,15 @@ public static Handler createCPUGame() {
                         "SELECT * FROM Game_Playing WHERE Game_ID = ?"
                     );
                     moveStmt.setInt(1, gameId);
-                    ResultSet rsMove = moveStmt.executeQuery();
+                    ResultSet rsMove2 = moveStmt.executeQuery();
 
-                    if (rsMove.next()) 
+                    if (rsMove2.next()) 
                     {
                         // Step 2: Insert into Completed_Games (adjust column names as needed)
                         PreparedStatement insertStmt = conn.prepareStatement(
                             "INSERT INTO Completed_Games (Game_ID) VALUES (?)"
                         );
-                        insertStmt.setInt(1, rsMove.getInt("Game_ID"));
+                        insertStmt.setInt(1, rsMove2.getInt("Game_ID"));
                         insertStmt.executeUpdate();
 
 
