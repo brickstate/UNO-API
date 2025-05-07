@@ -750,8 +750,8 @@ public static Handler createCPUGame() {
                 String matchedColumn = null;
                 String handColumn = null;
                 String topCardJson = null;
-                String activeEffect = handsRs.getString("Active_Effect");
-                String deckJson = handsRs.getString("Deck_Cards");
+                String activeEffect = null;
+                String deckJson = null;
 
                 if (handsRs.next()) 
                 {
@@ -766,6 +766,8 @@ public static Handler createCPUGame() {
                             break;
                         }
                     }
+                    activeEffect = handsRs.getString("Active_Effect");
+                    deckJson = handsRs.getString("Deck_Cards");
                 }
 
                 if (matchedColumn == null) {
