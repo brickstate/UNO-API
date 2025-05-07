@@ -977,11 +977,9 @@ public static Handler createCPUGame() {
                     {
                         // Step 2: Insert into Completed_Games (adjust column names as needed)
                         PreparedStatement insertStmt = conn.prepareStatement(
-                            "INSERT INTO Completed_Games (Game_ID, game_state, Is_CPU_Game) VALUES (?, ?, ?)"
+                            "INSERT INTO Completed_Games (Game_ID) VALUES (?)"
                         );
                         insertStmt.setInt(1, rsMove.getInt("Game_ID"));
-                        insertStmt.setString(2, rsMove.getString("game_state"));
-                        insertStmt.setBoolean(3, rsMove.getBoolean("Is_CPU_Game"));
                         insertStmt.executeUpdate();
 
                         // Step 3: Delete from Game_Playing
@@ -1166,7 +1164,7 @@ public static Handler createCPUGame() {
                 String CPUupdatedHandJson = mapper.writeValueAsString(CPUhandMap); // ✅ Use the Map
 
                 Map<String, String> CPUDeckMap = Game.DeckToMapFormat(CPUDeck);
-                String CPUupdatedDeckJson = mapper.writeValueAsString(CPUhandMap); // 😍🛒 Use the Map
+                String CPUupdatedDeckJson = mapper.writeValueAsString(CPUDeckMap); // 😍🛒 Use the Map
 
                 // Update the hand in the corresponding column
                 String CPUupdateHandQuery = "UPDATE Hands_In_Game SET P2_Hand = ? WHERE Game_ID = ?";
@@ -1207,11 +1205,9 @@ public static Handler createCPUGame() {
                     {
                         // Step 2: Insert into Completed_Games (adjust column names as needed)
                         PreparedStatement insertStmt = conn.prepareStatement(
-                            "INSERT INTO Completed_Games (Game_ID, game_state, Is_CPU_Game) VALUES (?, ?, ?)"
+                            "INSERT INTO Completed_Games (Game_ID) VALUES (?)"
                         );
                         insertStmt.setInt(1, rsMove.getInt("Game_ID"));
-                        insertStmt.setString(2, rsMove.getString("game_state"));
-                        insertStmt.setBoolean(3, rsMove.getBoolean("Is_CPU_Game"));
                         insertStmt.executeUpdate();
 
 
