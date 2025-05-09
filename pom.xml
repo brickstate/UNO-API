@@ -45,11 +45,20 @@
     </dependency>
 
     <!-- THIS IS AN ATTEMPT TO GET CLOUD RUN WORKING -->
-    <dependency>
+    <!--
+      <dependency>
       <groupId>com.google.cloud.sql</groupId>
       <artifactId>mysql-socket-factory-connector-j-8</artifactId>
       <version>1.12.0</version>
     </dependency>
+    -->
+    <!-- Will maybe fix the sql connection to the db? -->
+		<dependency>
+    		<groupId>com.google.cloud.sql</groupId>
+		    <artifactId>mysql-socket-factory-connector-j-8</artifactId>
+    		<version>1.25.0</version>
+		</dependency>
+		<!-- end fix -->
 
   </dependencies>
 

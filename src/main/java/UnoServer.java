@@ -60,8 +60,13 @@ import io.javalin.http.Handler;
 // 5. Other shi idk bruh 1->4 was all i could think about now
 
 public class UnoServer {
-    public static String jdbcUrl = "jdbc:mysql://sample-project-brickers-2025:us-east1:beachedwhaledb:3306/GameDB";
+    //public static String jdbcUrl = "jdbc:mysql://sample-project-brickers-2025:us-east1:beachedwhaledb:3306/GameDB";
 
+    public static String jdbcUrl = "jdbc:mysql:///GameDB?" 
+    + "cloudSqlInstance=sample-project-brickers-2025:us-east1:beachedwhaledb" 
+    + "&socketFactory=com.google.cloud.sql.mysql.SocketFactory" 
+    + "&user=appuser" 
+    + "&password=apppass";
     public static void main(String[] args) {
 
         //NOTE when we get this running in docker we may need to revisit "jdbcUrl"
@@ -144,14 +149,14 @@ public class UnoServer {
 
         return ctx -> {
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
 
         //needed for proper lambda return type
         StringBuilder result = new StringBuilder();
 
         //we want to do this to test the connection is working
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             System.out.println("Listing all registerd users from GameDB...");
 
             Statement stmt = conn.createStatement();
@@ -185,8 +190,8 @@ public class UnoServer {
   public static Handler registerUser(){
     return ctx -> {
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
 
         String username = ctx.formParam("username");
         String userPassword = ctx.formParam("password");
@@ -197,7 +202,7 @@ public class UnoServer {
         }
 
         //checking to see if attemped registration of username is unique entry in table "users"
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             // Check if username already exists
             String checkSql = "SELECT COUNT(*) FROM users WHERE username = ?";
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
@@ -254,11 +259,11 @@ public class UnoServer {
 public static Handler createCPUGame() {
     // ALSO extends draw 7 card init functionality to CPU hand 
     // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-    String user = "testuser";
-    String password = "123";
+    //String user = "testuser";
+    //String password = "123";
 
     return ctx -> {
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
             GameState newGame = generateNewGameState();
 
             ObjectMapper mapper = new ObjectMapper();
@@ -417,11 +422,11 @@ public static Handler createCPUGame() {
     public static Handler createPlayerGame() 
     {
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
 
         return ctx -> {
-                try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+                try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
                 {
                     String initialStateJson = 
                     "{\"gameId\":0," +
@@ -462,8 +467,8 @@ public static Handler createCPUGame() {
     {//TODO MAKE SURE IT WORKS 
     
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
 
         return ctx -> {
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
@@ -471,7 +476,7 @@ public static Handler createCPUGame() {
 
 
             // Load game state JSON
-            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+            try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
             {
                 //need to update Hands table with gameId/username -->
 
@@ -686,12 +691,12 @@ public static Handler createCPUGame() {
     public static Handler getGameState() 
     {
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
 
         return ctx -> {
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
-            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+            try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
                 PreparedStatement stmt = conn.prepareStatement(
                     "SELECT game_state FROM Game_Playing WHERE game_id = ?");
                 stmt.setInt(1, gameId);
@@ -715,15 +720,15 @@ public static Handler createCPUGame() {
      */
     public static Handler playCard() {
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
     
         return ctx -> {
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
             String username = ctx.pathParam("username");
             int cardIndex = Integer.parseInt(ctx.pathParam("card")); // card is now a number (index)
     
-            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+            try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
                 // Load game state
                 PreparedStatement selectStmt = conn.prepareStatement(
                     "SELECT game_state FROM Game_Playing WHERE game_Id = ?"
@@ -1254,7 +1259,7 @@ public static Handler createCPUGame() {
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/listUsers).Content\n\n")
 
                 .append("[POST] /registerUser   --> Registers a new user with username and password\n")
-                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body @{username='yourname'}).Content\"\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/registerUser -Method POST -Body @{username='yourname'}).Content\n\n")
 
                 .append("[POST] /createCPUGame  --> Creates a new game against CPU\n")
                 .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/createCPUGame -Method POST).Content\n\n")
@@ -1263,10 +1268,10 @@ public static Handler createCPUGame() {
                 //.append("    Command: Invoke-WebRequest -Uri http://localhost:7000/createPlayerGame -Method POST\n\n")
 
                 .append("[POST] /joinGame       --> Join an existing game\n")
-                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/joinGame/{gameId}/{username} -Method POST).Content \"\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/joinGame/{gameId}/{username} -Method POST).Content\n\n")
 
                 .append("[POST] /playCard       --> Play a card in a game\n")
-                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/playCard/{gameId}/{username}/{card} -Method POST).Content \"\n\n")
+                .append("    Command: (Invoke-WebRequest -Uri http://localhost:7000/playCard/{gameId}/{username}/{card} -Method POST).Content\n\n")
 
                 //TODO /drawCard/{gameId}/{username} 
                 .append("[POST] /drawCards       --> Draw cards until you have a valid hand to play\n")
@@ -1292,11 +1297,11 @@ public static Handler createCPUGame() {
   public static Handler checkOldGames() {
     return ctx -> {
     // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-    String user = "testuser";
-    String password = "123";
+    //String user = "testuser";
+    //String password = "123";
     int gameTimeout = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-    try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
+    try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
         // Select games older than 24 hours
         String selectOldGamesSql = "SELECT Game ID FROM Game_Playing WHERE Recent Update < ?";
         PreparedStatement selectStmt = conn.prepareStatement(selectOldGamesSql);
@@ -1347,13 +1352,13 @@ public static Handler createCPUGame() {
         
         return ctx -> {
             // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-            String user = "testuser";
-            String password = "123";
+            //String user = "testuser";
+            //String password = "123";
 
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
             String username = ctx.pathParam("username");
 
-            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+            try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
             {
                 String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_ID = ?";
                 try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
@@ -1402,10 +1407,10 @@ public static Handler createCPUGame() {
         //   + WHILE ... !valid() --> (draw card --+> p1_Hand) || valid() --> (do nothing ,, no need to draw)  
         return ctx -> {
             // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
-            String user = "testuser";
-            String password = "123";
+            //String user = "testuser";
+            //String password = "123";
 
-            try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) 
+            try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
             {
 
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
