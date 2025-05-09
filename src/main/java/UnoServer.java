@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +31,10 @@ import Game_Parts.Types.Color;
 import Game_Parts.Types.Value;
 import io.javalin.Javalin;
 import io.javalin.http.Handler;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 
 
 //This is the "Game Server" which in the grand scheme of the project should:
@@ -60,27 +65,70 @@ import io.javalin.http.Handler;
 // 5. Other shi idk bruh 1->4 was all i could think about now
 
 public class UnoServer {
+    //old way
     //public static String jdbcUrl = "jdbc:mysql://sample-project-brickers-2025:us-east1:beachedwhaledb:3306/GameDB";
+    
+    //given example
+    //public static String jbdsss = "jdbc:mysql:///<DB_NAME>?cloudSqlInstance=<INSTANCE_CONNECTION_NAME>&socketFactory=com.google.cloud.sql.mysql.SocketFactory&user=<DB_USER>&password=<DB_PASS>";
+    //private static final String INSTANCE_CONNECTION_NAME = "sample-project-brickers-2025:us-east1:beachedwhaledb";
+    //private static final String INSTANCE_UNIX_SOCKET = System.getenv("INSTANCE_UNIX_SOCKET");
+    //private static final String DB_USER = "cloudrun";
+    //private static final String DB_PASS = "cloudpass";
+    //private static final String DB_NAME = "GameDB";
 
+    /*
     public static String jdbcUrl = "jdbc:mysql:///GameDB?" 
     + "cloudSqlInstance=sample-project-brickers-2025:us-east1:beachedwhaledb" 
     + "&socketFactory=com.google.cloud.sql.mysql.SocketFactory" 
-    + "&user=appuser" 
-    + "&password=apppass";
-    public static void main(String[] args) {
+    + "&user=599603390645-compute";
+    
+    
+    public static DataSource createConnectionPool() {
+        HikariConfig config = new HikariConfig();
 
+        // Configure which instance and what database user to connect with.
+        config.setJdbcUrl(String.format(jdbcUrl));
+        config.addDataSourceProperty("cloudSqlRefreshStrategy", "lazy");
+        return new HikariDataSource(config);
+        
+    }
+
+    private static final DataSource dataSource = createConnectionPool();
+    */
+    public static HikariDataSource createConncetionpool() {
+        Properties connProps = new Properties();
+        connProps.setProperty("user","599603390645-compute");
+        connProps.setProperty("sslmode","disable");
+        connProps.setProperty("socketFactory","com.google.cloud.sql.mysql.SocketFactory");
+        connProps.setProperty("cloudSqlInstance","sample-project-brickers-2025:us-east1:beachedwhaledb");
+        connProps.setProperty("enableIamAuth","true");
+
+        // Initialize connection pool
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:mysql:///GameDB");
+        config.setDataSourceProperties(connProps);
+        config.setConnectionTimeout(10000); // 10s
+        
+        return new HikariDataSource(config);
+    }
+
+    public static HikariDataSource connectionPool = createConncetionpool();
+
+
+
+    public static void main(String[] args) {
         //NOTE when we get this running in docker we may need to revisit "jdbcUrl"
         //    and change localhost -> ?docker.something?
 
         //Necessary for the server to connect to Cloud SQL Proxy
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         //yes I hardcoded the user and password to the DB idc 
-        String user = "testuser";
-        String password = "123";
+        //String user = "testuser";
+        //String password = "123";
     
         
         //Keeps server from timing out and listens to enpoints
-        Javalin app = Javalin.create().start(7000);
+        Javalin app = Javalin.create().start(8080);
         
         // get server running and test enpoints
         // "landing" endpoint
@@ -146,7 +194,7 @@ public class UnoServer {
     // TEST this function by adding more user names into the database
     //   and see if the user names will print out one after the other
     public static Handler listUsers(){
-
+        
         return ctx -> {
         // String jdbcUrl = "jdbc:mysql://localhost:3306/GameDB";
         //String user = "testuser";
@@ -156,7 +204,7 @@ public class UnoServer {
         StringBuilder result = new StringBuilder();
 
         //we want to do this to test the connection is working
-        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+        try (Connection conn = connectionPool.getConnection()) {
             System.out.println("Listing all registerd users from GameDB...");
 
             Statement stmt = conn.createStatement();
@@ -202,7 +250,7 @@ public class UnoServer {
         }
 
         //checking to see if attemped registration of username is unique entry in table "users"
-        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+        try (Connection conn = connectionPool.getConnection()) {
             // Check if username already exists
             String checkSql = "SELECT COUNT(*) FROM users WHERE username = ?";
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
@@ -263,7 +311,7 @@ public static Handler createCPUGame() {
     //String password = "123";
 
     return ctx -> {
-        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+        try (Connection conn = connectionPool.getConnection()) {
             GameState newGame = generateNewGameState();
 
             ObjectMapper mapper = new ObjectMapper();
@@ -426,7 +474,7 @@ public static Handler createCPUGame() {
         //String password = "123";
 
         return ctx -> {
-                try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
+                try (Connection conn = connectionPool.getConnection()) 
                 {
                     String initialStateJson = 
                     "{\"gameId\":0," +
@@ -476,7 +524,7 @@ public static Handler createCPUGame() {
 
 
             // Load game state JSON
-            try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
+            try (Connection conn = connectionPool.getConnection()) 
             {
                 //need to update Hands table with gameId/username -->
 
@@ -696,7 +744,7 @@ public static Handler createCPUGame() {
 
         return ctx -> {
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
-            try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            try (Connection conn = connectionPool.getConnection()) {
                 PreparedStatement stmt = conn.prepareStatement(
                     "SELECT game_state FROM Game_Playing WHERE game_id = ?");
                 stmt.setInt(1, gameId);
@@ -728,7 +776,7 @@ public static Handler createCPUGame() {
             String username = ctx.pathParam("username");
             int cardIndex = Integer.parseInt(ctx.pathParam("card")); // card is now a number (index)
     
-            try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+            try (Connection conn = connectionPool.getConnection()) {
                 // Load game state
                 PreparedStatement selectStmt = conn.prepareStatement(
                     "SELECT game_state FROM Game_Playing WHERE game_Id = ?"
@@ -1301,7 +1349,7 @@ public static Handler createCPUGame() {
     //String password = "123";
     int gameTimeout = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-    try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
+    try (Connection conn = connectionPool.getConnection()) {
         // Select games older than 24 hours
         String selectOldGamesSql = "SELECT Game ID FROM Game_Playing WHERE Recent Update < ?";
         PreparedStatement selectStmt = conn.prepareStatement(selectOldGamesSql);
@@ -1358,7 +1406,7 @@ public static Handler createCPUGame() {
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
             String username = ctx.pathParam("username");
 
-            try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
+            try (Connection conn = connectionPool.getConnection()) 
             {
                 String selectQuery = "SELECT * FROM Hands_In_Game WHERE Game_ID = ?";
                 try (PreparedStatement selectStmt = conn.prepareStatement(selectQuery)) {
@@ -1410,7 +1458,7 @@ public static Handler createCPUGame() {
             //String user = "testuser";
             //String password = "123";
 
-            try (Connection conn = DriverManager.getConnection(jdbcUrl)) 
+            try (Connection conn = connectionPool.getConnection()) 
             {
 
             int gameId = Integer.parseInt(ctx.pathParam("gameId"));
