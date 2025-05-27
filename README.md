@@ -1,2 +1,6 @@
-# setupBeachedWhale
-Trying to get UNO to run in a "container" and deploy on the cloud
+### Behold...
+# UNO API
+
+Project Created in Spring 2025 for a "Cloud Computing" class project . 
+Authors: Hunter Brickers, Kaeden Lewis
+
